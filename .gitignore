@@ -1,6 +1,11 @@
 *.o
 *.a
 
+src/prsgen
+src/prsgen.dSYM
+src/wf
+src/wfx
+
 *~
 .#*
 *#
