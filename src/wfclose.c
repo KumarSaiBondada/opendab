@@ -24,9 +24,6 @@
 
 #include "opendab.h"
 
-int wf_mem_write(int, unsigned short, unsigned short);
-int wf_leds_off(int);
-
 int wf_close(int fd)
 {
 	wf_leds_off(fd);

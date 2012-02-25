@@ -20,8 +20,6 @@
 */
 #include "opendab.h"
 
-int wf_timing_msg(int, unsigned char*);
-
 int wf_timing(int fd, int msgnum)
 {
 	unsigned char m0[] = {0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

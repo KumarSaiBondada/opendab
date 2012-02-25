@@ -13,7 +13,7 @@
 //10 Energy dispersal
 //10.1 General procedure
 //10.2 Energy dispersal as applied in the Fast Information Channel
-int scramble(char *logfile, char *ibuf, char *obuf, int len)
+int scramble(char *logfile, unsigned char *ibuf, unsigned char *obuf, int len)
 {
     FILE *Op = 0;
     unsigned short v;

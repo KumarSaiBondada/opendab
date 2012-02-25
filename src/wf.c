@@ -22,31 +22,8 @@
 ** Main program interoperating with the Psion WaveFinder 
 */
 #include "opendab.h"
-#include "figs.h"
 
 #define MAXFIBS 700
-
-extern fftw_complex* prs_cread(char *, int);
-extern unsigned int wf_init(int, double);
-extern int wf_leds(int, int, int, int);
-extern void wf_tune(int, double);
-extern int wf_timing(int, int); 
-extern int wf_mem_write(int, unsigned short, unsigned short);
-extern int wf_req1req2(int, int, int);
-extern int wf_read(int, unsigned char *, int *);
-extern int wf_close(int);
-extern int prs_assemble(int, unsigned char *, unsigned char *, unsigned char *,int);
-extern int wfsyncinit(int);
-extern void wf_sleep(int);
-extern int ficinit(struct ens_info *);
-extern int labelled(struct ens_info *);
-extern int fic_assemble(unsigned char *, unsigned char *, unsigned char *, FILE *);
-extern int disp_ensemble(struct ens_info *);
-extern int user_select_service(struct ens_info *, struct selsrv *);
-extern int startsym(struct symrange*, struct subch *);
-extern int wfsymsel(unsigned char *, struct symrange *);
-extern int msc_assemble(unsigned char *, struct subch *, struct symrange *);
-extern int wfcatch(int);
 
 extern struct ens_info einf;
 extern int sync_locked;
@@ -224,7 +201,7 @@ int main (int argc, char **argv)
 								fprintf(stderr,"Type ctrl-c to quit\n");
 							}
 							if ((synccnt == 0) && (*(rdbuf+2+k) > 4))
-								msc_assemble(rdbuf+k, sel_srv.sch, &sel_srv.sr);
+                                                          msc_assemble(rdbuf+k, sel_srv.sch, &sel_srv.sr);
 						}
 					}
 				}

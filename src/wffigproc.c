@@ -24,9 +24,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "figs.h"
+#include "opendab.h"
 #include "wfbyteops.h"
-#include "wfficproc.h"
 #include "prot.h"
 
 /* DEBUG:
@@ -39,8 +38,6 @@
 #define DEBUGd 0
 
 extern struct ens_info einf;
-
-int eid;
 
 /* FIG type handlers */
 int fig_0(int, unsigned char*);

@@ -23,7 +23,7 @@
 */
 #include <stdio.h>
 #include "wfic/wfic.h"
-#include "figs.h"
+#include "opendab.h"
 #include "prot.h" 
 
 #define BLKSIZE 128

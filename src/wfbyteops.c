@@ -22,7 +22,6 @@
 ** Byte manipulation functions
 */
 
-#define _XOPEN_SOURCE 1
 #include <unistd.h>
 
 /* 

@@ -25,97 +25,6 @@
 
 #include "opendab.h"
 
-int wf_mem_write(int, unsigned short, unsigned short);
-int wf_boot_dsps(int);
-int wf_req1req2(int,  int, int);
-int wf_afmsg(int, unsigned int);
-int wf_sendmem(int, int, int, unsigned char*, int);
-int wf_r1_msg(int, unsigned char*);
-int wf_r2_msg(int, unsigned char*);
-int wf_leds(int, int, int, int);
-int wf_timing(int, int);
-void wf_read(int, FILE*, int*); 
-void wf_tune(int, double);
-int wf_close(int);
-void wf_sleep(int);
-
-/*
-** Initialize
-*/
-unsigned int wf_init(int fd, double freq)
-{
-	/* Initialize various SL11R registers - see wfsl11r.h */
-	/* Much of this is concerned with the PWM channels which control
-	   the coloured LEDs. */
-	wf_req1req2(fd, 2, 0);
-	wf_mem_write(fd, PWMCTRLREG, 0);
-	wf_mem_write(fd, PWMMAXCNT, 0x03ff);
-
-	wf_mem_write(fd, PWMCH0STRT, 0);
-	wf_mem_write(fd, PWMCH0STOP, 0);
-
-	wf_mem_write(fd, PWMCH1STRT, 0);
-	wf_mem_write(fd, PWMCH1STOP, 0);
-
-	wf_mem_write(fd, PWMCYCCNT, 0x03ff);
-
-	wf_mem_write(fd, PWMCH2STRT, 0);
-	wf_mem_write(fd, PWMCH2STOP, 0);
-
-	wf_mem_write(fd, PWMCH3STRT, 0);
-	wf_mem_write(fd, PWMCH3STOP, 0);
-
-	wf_mem_write(fd, PWMCH0STRT, 0);
-	wf_mem_write(fd, PWMCH0STOP, 0x02ff);
-
-	wf_mem_write(fd, PWMCH1STOP, 0x02ff);
-
-	wf_mem_write(fd, PWMCTRLREG, 0x800f);
-	wf_mem_write(fd, IOCTRLREG1, 0x3de0);
-	wf_mem_write(fd, UNK0XC120, 0);        /* TODO: work out what's at 0xc120 */
-	wf_sleep(100000);
-	wf_mem_write(fd, UNK0XC120, 0xffff);
-	wf_mem_write(fd, OUTREG1, 0x3800);     /* TODO: work out what each bit controls */
-	wf_mem_write(fd, OUTREG0, 0x0000);
-	wf_mem_write(fd, OUTREG1, 0x3000);
-	wf_mem_write(fd, OUTREG1, 0x3800);
-	wf_boot_dsps(fd);
-	wf_mem_write(fd, OUTREG0, 0x1000);     /* TODO: work out what each bit controls */
-	wf_leds(fd,0x3ff, 0x180, 0x3ff); /* Green LED on as simple indicator */
-	wf_tune(fd, freq);
-	wf_sleep(400000);
-	wf_timing(fd, 0);
-	wf_sleep(4000);
-	wf_timing(fd, 1);
-	wf_sleep(4000);
-	wf_timing(fd, 1);
-	wf_sleep(4000);
-	wf_timing(fd, 2);
-	wf_sleep(50000);
-	wf_mem_write(fd, DACVALUE, 0x5330);
-	wf_mem_write(fd, DACVALUE, 0x5330);
-	wf_sleep(77000);
-	/* The next control message causes the WaveFinder to start sending
-	   isochronous data */
-	wf_req1req2(fd, 1, 1);
-	/* wf_read(fd, of, &pkts); */
-	wf_mem_write(fd, PWMCTRLREG, 0x800f);
-	wf_timing(fd, 1);
-	wf_timing(fd, 2);
-	wf_timing(fd, 1);
-	wf_timing(fd, 3);
-	wf_tune(fd, freq);
-	wf_sleep(200000);
-	wf_timing(fd, 4);
-	wf_tune(fd, freq);
-	wf_sleep(200000);
-	wf_tune(fd, freq);
-	wf_sleep(200000);
-	wf_mem_write(fd, DACVALUE, 0x5330);
-	return 0;
-}
-
-
 /*
 ** Boot the WaveFinder DSPs.
 **
@@ -335,4 +244,80 @@ int wf_req1req2(int fd, int reqnum, int msgnum)
 		wf_r2_msg(fd, p);
 
 	return 0;
+}
+
+/*
+** Initialize
+*/
+int wf_init(int fd, double freq)
+{
+	/* Initialize various SL11R registers - see wfsl11r.h */
+	/* Much of this is concerned with the PWM channels which control
+	   the coloured LEDs. */
+	wf_req1req2(fd, 2, 0);
+	wf_mem_write(fd, PWMCTRLREG, 0);
+	wf_mem_write(fd, PWMMAXCNT, 0x03ff);
+
+	wf_mem_write(fd, PWMCH0STRT, 0);
+	wf_mem_write(fd, PWMCH0STOP, 0);
+
+	wf_mem_write(fd, PWMCH1STRT, 0);
+	wf_mem_write(fd, PWMCH1STOP, 0);
+
+	wf_mem_write(fd, PWMCYCCNT, 0x03ff);
+
+	wf_mem_write(fd, PWMCH2STRT, 0);
+	wf_mem_write(fd, PWMCH2STOP, 0);
+
+	wf_mem_write(fd, PWMCH3STRT, 0);
+	wf_mem_write(fd, PWMCH3STOP, 0);
+
+	wf_mem_write(fd, PWMCH0STRT, 0);
+	wf_mem_write(fd, PWMCH0STOP, 0x02ff);
+
+	wf_mem_write(fd, PWMCH1STOP, 0x02ff);
+
+	wf_mem_write(fd, PWMCTRLREG, 0x800f);
+	wf_mem_write(fd, IOCTRLREG1, 0x3de0);
+	wf_mem_write(fd, UNK0XC120, 0);        /* TODO: work out what's at 0xc120 */
+	wf_sleep(100000);
+	wf_mem_write(fd, UNK0XC120, 0xffff);
+	wf_mem_write(fd, OUTREG1, 0x3800);     /* TODO: work out what each bit controls */
+	wf_mem_write(fd, OUTREG0, 0x0000);
+	wf_mem_write(fd, OUTREG1, 0x3000);
+	wf_mem_write(fd, OUTREG1, 0x3800);
+	wf_boot_dsps(fd);
+	wf_mem_write(fd, OUTREG0, 0x1000);     /* TODO: work out what each bit controls */
+	wf_leds(fd,0x3ff, 0x180, 0x3ff); /* Green LED on as simple indicator */
+	wf_tune(fd, freq);
+	wf_sleep(400000);
+	wf_timing(fd, 0);
+	wf_sleep(4000);
+	wf_timing(fd, 1);
+	wf_sleep(4000);
+	wf_timing(fd, 1);
+	wf_sleep(4000);
+	wf_timing(fd, 2);
+	wf_sleep(50000);
+	wf_mem_write(fd, DACVALUE, 0x5330);
+	wf_mem_write(fd, DACVALUE, 0x5330);
+	wf_sleep(77000);
+	/* The next control message causes the WaveFinder to start sending
+	   isochronous data */
+	wf_req1req2(fd, 1, 1);
+	/* wf_read(fd, of, &pkts); */
+	wf_mem_write(fd, PWMCTRLREG, 0x800f);
+	wf_timing(fd, 1);
+	wf_timing(fd, 2);
+	wf_timing(fd, 1);
+	wf_timing(fd, 3);
+	wf_tune(fd, freq);
+	wf_sleep(200000);
+	wf_timing(fd, 4);
+	wf_tune(fd, freq);
+	wf_sleep(200000);
+	wf_tune(fd, freq);
+	wf_sleep(200000);
+	wf_mem_write(fd, DACVALUE, 0x5330);
+        return 0;
 }

@@ -21,19 +21,14 @@
 /*
 **  Main Service Channel decoding etc.
 */
-#define _XOPEN_SOURCE 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include "wfic/wfic.h"
-#include "figs.h"
 
-extern int uep_depuncture(unsigned char*, unsigned char*, struct subch*, int*);
-extern int eep_depuncture(unsigned char*, unsigned char*, struct subch*, int*);
-extern int wfdabplusdec(unsigned char*, unsigned char*, int, int);
-extern int wfinitrs();
-extern int wfmp2(unsigned char *, int, int);
+#include "wfic/wfic.h"
+#include "opendab.h"
 
 struct blist {
 	unsigned char* data;
@@ -194,7 +189,7 @@ int msc_decode(struct subch *s, struct symrange *sr)
 	/* BDB's wfic functions: */
 	bits = len/N - (K - 1);
 	k_viterbi(&metric, obuf, dpbuf, bits, mettab, 0, 0);
-	scramble(NULL, (char*)obuf, (char*)dpbuf, bits);
+	scramble(NULL, obuf, dpbuf, bits);
 	bit_to_byte(NULL, 1, dpbuf, bits, obuf, &obytes);
 	if (s->dabplus)
 #ifdef DABPLUS
@@ -204,7 +199,7 @@ int msc_decode(struct subch *s, struct symrange *sr)
 #endif
 	else
 		/* fwrite(obuf, sizeof(char), obytes, stdout); */
-		wfmp2(obuf, obytes, s->bitrate);
+                wfmp2(obuf, obytes, s->bitrate);
 
 	return 0;
 }

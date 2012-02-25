@@ -28,8 +28,6 @@
 #include <mach/mach.h>
 #endif
 
-extern int wf_mem_write(int, unsigned short, unsigned short);
-
 int wf_afc(int fd, double afcv)
 {
 	static double offset = 3.25e-1;

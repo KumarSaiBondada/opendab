@@ -28,9 +28,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <errno.h>
+
 #include "wfic/wfic.h"
-#include "figs.h"
-#include "prot.h"
+#include "opendab.h"
 
 /* DEBUG:
 ** 0 - no info
@@ -39,27 +39,21 @@
 */
 #define DEBUG 0
 
-int unpickfig(unsigned char*, int);
-void msc_assemble(char*, unsigned char*, unsigned char*, struct subch*, struct symrange*, FILE*);
-
 int wfgetnum(char *);
 struct ens_info einf;
 
-
-unsigned char selstr[10];
 int fibcnt = 0;
 static char lbuf[80];
 
-
-int ficinit(struct ens_info *einf)
+int ficinit(struct ens_info *e)
 {
 	int j;
 
-	einf->num_schans = 0;
-	einf->num_srvs = 0;
-	einf->srv = NULL;
+	e->num_schans = 0;
+	e->num_srvs = 0;
+	e->srv = NULL;
 	for (j=0; j < 64; j++)
-		einf->schan[j].subchid = 0xffff; /* Mark unused entries */
+		e->schan[j].subchid = 0xffff; /* Mark unused entries */
 
 	return 0;
 }
@@ -230,7 +224,7 @@ int disp_ensemble(struct ens_info* e)
 int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
 {
 	struct service *p;
-	int srvs = einf.num_srvs-1, i = -1, j = 0;
+	int srvs = e->num_srvs-1, i = -1, j = 0;
 	static int rq = 0;
 
 	if (!rq) {
@@ -241,8 +235,8 @@ int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
 	i = wfgetnum(lbuf);
 
 	if (i != -1) {
-		if ((i < einf.num_srvs) && (i >= 0)) {
-			p = einf.srv;
+		if ((i < e->num_srvs) && (i >= 0)) {
+			p = e->srv;
 			while (p != NULL) {
 				if ((j == i) || ((j == i - 1) && (p->sa != NULL))) {
 					sel_srv->sid = p->sid;

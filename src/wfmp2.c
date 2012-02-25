@@ -21,8 +21,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "wfbyteops.h"
-
-int crc16check(unsigned char*, int);
+#include "opendab.h"
 
 /*
 ** Check that the audio frame pointed to by 'buf'

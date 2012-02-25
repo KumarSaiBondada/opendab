@@ -18,11 +18,7 @@
     You should have received a copy of the GNU General Public License
     along with OpenDAB.  If not, see <http://www.gnu.org/licenses/>.
 */
-#define _XOPEN_SOURCE 1
 #include "opendab.h"
-
-extern fftw_complex *prs_cread(const char*, int);
-extern void cpx_dump(char*, fftw_complex*, int);
 
 int *cos_table;
 fftw_complex *prs1, *prs2;
@@ -49,7 +45,7 @@ int wfref(int indx, int pts, fftw_complex* outp, fftw_complex* inp)
 /*
 ** Load PRS data, build cosine table
 */
-int wfrefinit(int fd)
+int wfrefinit(void)
 {
 	int i;
 

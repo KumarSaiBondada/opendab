@@ -1,34 +1,9 @@
-//
-//
-//
 #include <stdio.h>
 #include <string.h>
 
-
-int fic_decode(unsigned char*,unsigned char*,unsigned char*,unsigned char*);
+#include "wfic.h"
 
 // interleaver.c
-extern int qpsk_symbol_mapper(unsigned char *P, unsigned char *q);
-extern int qpsk_symbol_demapper(unsigned char *q, unsigned char *P);
-extern int init_table49();
-extern int frequency_interleaver(unsigned char *q, unsigned char *y);
-extern int frequency_deinterleaver(unsigned char *y, unsigned char *q);
-
-// puncture.c
-extern int puncture(char *logfile, unsigned char *ibuf, int ilen, unsigned char *obuf, int *olen);
-extern int depuncture(char *logfile, unsigned char *ibuf, int ilen, unsigned char *obuf, int *olen);
-
-// encoder.c
-extern int convolute(char *logfile, char *ibuf, int ilen, char *obuf, int *olen);
-
-// viterbi.c
-extern int init_viterbi();
-extern int viterbi(char *logfile, unsigned  char *ibuf, int ilen, unsigned char *obuf, int *olen);
-
-// scrambler.c
-extern int scramble(char *logfile, unsigned char *ibuf, unsigned char *obuf, int len);
-
-
 // G(x) = x^16 + x^12 + x^5 + 1 (ITU-T Recommendation X.25 [6]).
 #define CRC_POLY    0x8408
 #define CRC_GOOD    0xf0b8

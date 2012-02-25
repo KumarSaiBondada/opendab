@@ -21,9 +21,10 @@
 #ifndef WFBYTEOPS_H
 #define WFBYTEOPS_H    1
 
-extern int ipack(unsigned char *);
-extern short spack(unsigned char *);
-extern void iswab(int *);
-extern void sswab(short *);
-extern void bigend(unsigned int *);
+int ipack(unsigned char *);
+short spack(unsigned char *);
+void iswab(int *);
+void sswab(short *);
+void bigend(unsigned int *);
+
 #endif

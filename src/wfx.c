@@ -25,15 +25,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "figs.h"
-
-extern int ficinit(struct ens_info*);
-extern int labelled(struct ens_info*);
-extern int fic_assemble(unsigned char*, unsigned char*, unsigned char*, FILE *);
-extern int msc_assemble(unsigned char*, struct subch*, struct symrange*);
-extern int user_select_service(struct ens_info*, struct selsrv*);
-extern int disp_ensemble(struct ens_info*);
-extern int startsym(struct symrange*, struct subch*);
+#include "opendab.h"
 
 extern struct ens_info einf;
 
@@ -112,21 +104,23 @@ int main(int argc, char **argv)
 			if ((*(pktbuf+2) == 2)||(*(pktbuf+2) == 3)||(*(pktbuf+2) == 4))
 				fic_assemble(pktbuf, fsyms, rfibs, ofp);
 	}
-
+        
 	rewind(ifp);
 	disp_ensemble(&einf);
 	user_select_service(&einf, &sel_srv);
-
-	startsym(&sel_srv.sr, sel_srv.sch);
-       
+        startsym(&sel_srv.sr, sel_srv.sch);
+        
 	while (!feof(ifp)) {
 		cnt = fread(pktbuf, 524, 1, ifp);
-		if ((f++ > FSKIP) && (cnt == 1) && (*pktbuf == 0x0c) && (*(pktbuf+1) == 0x62)) 
-			if ((sel_srv.sch != NULL) && (*(pktbuf+2) > 4))
-				msc_assemble(pktbuf, sel_srv.sch, &sel_srv.sr);
+		if ((f++ > FSKIP) && (cnt == 1) && (*pktbuf == 0x0c) && (*(pktbuf+1) == 0x62)) {
+                        if ((sel_srv.sch != NULL) && (*(pktbuf+2) > 4)) {
+                                msc_assemble(pktbuf, sel_srv.sch, &sel_srv.sr);
+                        }
+                }
 	}
 	fclose(ifp);
 	if (gen_fic)
 		fclose(ofp);
+
 	exit(EXIT_SUCCESS);
 }

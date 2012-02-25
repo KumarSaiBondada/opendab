@@ -18,14 +18,12 @@
     You should have received a copy of the GNU General Public License
     along with OpenDAB.  If not, see <http://www.gnu.org/licenses/>.
 */
-#include "opendab.h"
 #include "wfbyteops.h"
+#include "opendab.h"
+
 #ifdef DABPLUS
 #include <fec.h>
 #endif
-
-int firecrccheck(unsigned char*);
-int crccheck(unsigned char*, int);
 
 #ifdef DABPLUS
 static void *rs;

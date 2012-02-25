@@ -45,7 +45,6 @@ unsigned int Poly615[] = { 042631, 047245, 073363, 056507, 077267, 064537 }; /* 
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#define NULL ((void *)0)
 
 /* There ought to be a more general way to do this efficiently ... */
 #if defined(__alpha__) || defined(__x86_64__)

@@ -25,8 +25,6 @@
 */
 #include "opendab.h"
 
-extern int wf_close(int);
-
 extern FILE *of, *ffp;
 static int fdw;
 

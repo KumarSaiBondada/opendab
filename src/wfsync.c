@@ -26,34 +26,10 @@
 */
 #include "opendab.h"
 
-
 #ifdef __MACH__
 #include <mach/clock.h>
 #include <mach/mach.h>
 #endif
-
-extern int wf_mem_write(int, unsigned short, unsigned short);
-extern unsigned int* prs_read(char*);
-extern fftw_complex* prs_cread(char*, int);
-extern int prs_scale(unsigned char *, fftw_complex *);
-extern int fft_prs(fftw_complex *,fftw_complex *,int);
-extern int ifft_prs(fftw_complex *,fftw_complex *,int);
-extern void cplx_dump(char*, fftw_complex*, int);
-extern void int_dump(char*, int *, int);
-extern void dbl_dump(char*, double*, int);
-extern int mpy3(fftw_complex*, fftw_complex*,fftw_complex*,int);
-extern int mpy(fftw_complex*, fftw_complex*,fftw_complex*,int);
-extern int mag(fftw_complex*,double*,int);
-extern double mean(double*,int);
-extern double maxext(double*, int, int*);
-extern int wf_timing_msg(int, unsigned char*);
-extern double wfimp(double, fftw_complex*);
-extern int wfref(int, int, fftw_complex*, fftw_complex*);
-extern int wfrefinit(int);
-extern double raverage(double);
-extern int wf_afc(int, double);
-extern int wfpk(double*, int);
-extern int wf_close(int);
 
 extern fftw_complex *prs1, *prs2;
 

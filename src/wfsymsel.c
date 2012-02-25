@@ -21,12 +21,12 @@
 /*
 ** WaveFinder symbol selection
 */
-#define _XOPEN_SOURCE 1
+
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>
-#include "figs.h"
 
+#include "opendab.h"
 
 /* Convert subchannel start address and size
 ** to start and end symbol numbers for each of the 
@@ -46,7 +46,7 @@ int startsym(struct symrange *r, struct subch *s)
 	}
 	r->startcu = s->startaddr % CUSPERSYM;
 	r->numsyms = r->end[0] - r->start[0] + 1;
-	/* fprintf(stderr,"start[0]=%d end[0]=%d start[1]=%d end[1]=%d start[2]=%d end[2]=%d start[3]=%d end[3]=%d\n",r->start[0],r->end[0],r->start[1],r->end[1],r->start[2],r->end[2],r->start[3],r->end[3]); */
+	/*fprintf(stderr,"start[0]=%d end[0]=%d start[1]=%d end[1]=%d start[2]=%d end[2]=%d start[3]=%d end[3]=%d\n",r->start[0],r->end[0],r->start[1],r->end[1],r->start[2],r->end[2],r->start[3],r->end[3]);*/
 	return 0;
 }
 
