@@ -5,7 +5,10 @@ src/prsgen
 src/prsgen.dSYM
 src/wf
 src/wfx
+src/wfxall
 
 *~
 .#*
 *#
+
+*.mp2

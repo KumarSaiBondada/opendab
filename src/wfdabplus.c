@@ -161,7 +161,7 @@ int wfadts(int framelen, struct stream_parms *sp)
 ** Accumulate 5 frames in sfbuf - the first frame
 ** must begin with a valid audio superframe header.
 */
-int wfdabplusdec(unsigned char* sfbuf, unsigned char* ibuf, int ibytes, int bitrate)
+int wfdabplusdec(unsigned char* sfbuf, unsigned char* ibuf, int ibytes, int bitrate, FILE *dest)
 {
 	static int frame = 0;
 	const int austab[4] = {4, 2, 6, 3};
@@ -259,7 +259,7 @@ int wfdabplusdec(unsigned char* sfbuf, unsigned char* ibuf, int ibytes, int bitr
 			/* AUs with bad CRC are silently ignored */
 			if (crccheck(sfbuf + au_start[i], au_size[i])) {
 				wfadts(au_size[i]-2, &sp);
-				fwrite(sfbuf + au_start[i], sizeof(unsigned char), au_size[i] - 2, stdout);
+				fwrite(sfbuf + au_start[i], sizeof(unsigned char), au_size[i] - 2, dest);
 			}
 		}
 	}

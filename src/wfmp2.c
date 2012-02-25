@@ -27,7 +27,7 @@
 ** Check that the audio frame pointed to by 'buf'
 ** is valid - if not then it is silently ignored
 */
-int wfmp2(unsigned char *buf, int len, int bitrate)
+int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest)
 {
 /* These header bits are constant for DAB */
 #define HMASK 0xfff70e03
@@ -79,7 +79,7 @@ int wfmp2(unsigned char *buf, int len, int bitrate)
 		header_expected = 1;
 
 	if (header_valid)
-		fwrite(buf, sizeof(char), len, stdout);
+		fwrite(buf, sizeof(char), len, dest);
 
 	return 0;
 }

@@ -92,15 +92,15 @@ struct cbuf {
         int head;
 };
 
-int wfmp2(unsigned char *buf, int len, int bitrate);
+int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest);
 
 void wf_time(struct timespec *tp);
 
 int wfinitrs();
-int wfdabplusdec(unsigned char *sfbuf, unsigned char *ibuf, int ibytes, int bitrate);
+int wfdabplusdec(unsigned char *sfbuf, unsigned char *ibuf, int ibytes, int bitrate, FILE *dest);
 
 int prs_assemble(int fd, unsigned char *rdbuf, unsigned char *prsbuf, unsigned char *selstr, int i);
-int msc_assemble(struct cbuf *cbuf, unsigned char *symbuf, struct selsrv *srv);
+int msc_assemble(unsigned char *symbuf, struct selsrv *srv);
 int fic_assemble(unsigned char* rdbuf, unsigned char* ficsyms, unsigned char* rawfibs, FILE *ofp);
 int startsym(struct symrange *r, struct subch *s);
 int ficinit(struct ens_info *e);

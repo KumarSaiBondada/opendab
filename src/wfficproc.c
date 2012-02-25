@@ -242,6 +242,7 @@ int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
 					sel_srv->sid = p->sid;
                                         sel_srv->cur_frame = 0;
                                         sel_srv->cifcnt = 0;
+                                        sel_srv->dest = stdout;
 					if ((j == i - 1) && (p->sa != NULL))
 						sel_srv->sch = p->sa;
 					else

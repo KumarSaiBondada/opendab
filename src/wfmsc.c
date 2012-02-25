@@ -136,7 +136,7 @@ int time_disinterleave(struct cbuf *cbuf, unsigned char *obuf, int subchsz, stru
 /*
 ** Finish decoding the frames from the circular buffer.
 */
-int msc_decode(struct cbuf *cbuf, struct subch *s, struct symrange *sr)
+int msc_decode(struct selsrv *srv)
 {
 /* Constraint length */
 #define N 4
@@ -147,6 +147,9 @@ int msc_decode(struct cbuf *cbuf, struct subch *s, struct symrange *sr)
 	static unsigned char *lf, *dpbuf, *obuf, *sfbuf;
 	unsigned int metric;
 	int bits, len, obytes;
+
+        struct subch *s = srv->sch;
+        struct symrange *sr = &srv->sr;
 
 	if (init) {
 		init = 0;
@@ -172,7 +175,7 @@ int msc_decode(struct cbuf *cbuf, struct subch *s, struct symrange *sr)
 		
 	}
 		
-	time_disinterleave(cbuf, lf, s->subchsz, sr);
+	time_disinterleave(srv->cbuf, lf, s->subchsz, sr);
 	if (s->eepprot)
 		eep_depuncture(dpbuf, lf, s, &len);
 	else
@@ -185,13 +188,12 @@ int msc_decode(struct cbuf *cbuf, struct subch *s, struct symrange *sr)
 	bit_to_byte(NULL, 1, dpbuf, bits, obuf, &obytes);
 	if (s->dabplus)
 #ifdef DABPLUS
-		wfdabplusdec(sfbuf, obuf, obytes, s->bitrate);
+		wfdabplusdec(sfbuf, obuf, obytes, s->bitrate, srv->dest);
 #else
 	        fprintf(stderr,"Built without DAB+ support - enable in Makefile and rebuild\n");
 #endif
 	else
-		/* fwrite(obuf, sizeof(char), obytes, stdout); */
-                wfmp2(obuf, obytes, s->bitrate);
+                wfmp2(obuf, obytes, s->bitrate, srv->dest);
 
 	return 0;
 }
@@ -201,7 +203,7 @@ int msc_decode(struct cbuf *cbuf, struct subch *s, struct symrange *sr)
 ** after frequency deinterleaving, to a circular buffer.
 ** Complete processing once buffer is full. 
 */ 
-int msc_assemble(struct cbuf *cbuf, unsigned char *symbuf, struct selsrv *srv)
+int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 {
 	unsigned char sym, frame;
 	unsigned char fbuf[BITSPERSYM];
@@ -215,31 +217,31 @@ int msc_assemble(struct cbuf *cbuf, unsigned char *symbuf, struct selsrv *srv)
 	if (sym == srv->sr.start[0]) {
 		srv->cur_frame = frame;
 		freq_deinterleave(fbuf, symbuf+12);
-		buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, &srv->sr);
+		buffer_full = write_cbuf(srv->cbuf, fbuf, BITSPERSYM, &srv->sr);
 	} else {
 		for (j=1; j < 4; j++)
 			if (sym == srv->sr.start[j]) {
 				if (frame != srv->cur_frame) {
-					reset_cbuf(cbuf);
+					reset_cbuf(srv->cbuf);
 				} else {
 					freq_deinterleave(fbuf, symbuf+12);
-					buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, &srv->sr);
+					buffer_full = write_cbuf(srv->cbuf, fbuf, BITSPERSYM, &srv->sr);
 				}
 			}
 		for (j=0; j < 4; j++)
 			if ((sym > srv->sr.start[j]) && (sym <= srv->sr.end[j])) {
 				if (frame != srv->cur_frame) {
-                                        reset_cbuf(cbuf);
+                                        reset_cbuf(srv->cbuf);
 				} else {
 					freq_deinterleave(fbuf, symbuf+12);
-					buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, &srv->sr);
+					buffer_full = write_cbuf(srv->cbuf, fbuf, BITSPERSYM, &srv->sr);
 					if (sym == srv->sr.end[j])
 						srv->cifcnt++;
 				}
 			}
 	}
 	if (buffer_full)
-		msc_decode(cbuf, srv->sch, &srv->sr);
+		msc_decode(srv);
 
 	return 0;
 }

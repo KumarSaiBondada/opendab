@@ -95,11 +95,13 @@ struct ens_info {
 };
 
 struct selsrv {
+	int sid;
 	struct subch *sch;
 	struct symrange sr; 
-	int sid;
+        struct cbuf *cbuf;
 	unsigned int cur_frame;
         unsigned int cifcnt;
+        FILE *dest;
 };
 
 /* FIG Header */
