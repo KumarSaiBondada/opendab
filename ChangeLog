@@ -1,0 +1,8 @@
+OpenDAB Change Log:
+	
+8  Feb 2008	v0.01 - made available
+5  Mar 2008	v0.02 - fixed timer related errors in wfsync.c and wfafc.c to improve sync reliability
+7  Aug 2008	v0.03 - added preliminary DAB+ support, added wfmp2.c for crude mp2 header check
+15 May 2010	v0.04 - updated driver, added multiple device support, DAB+ fixes, selection fix
+11 Oct 2010	v0.05 - included Philip Pemberton's 64-bit patch to viterbi.c
+18 Apr 2011     v0.06 - fixed driver to accomodate changes to kernel API from 2.6.36

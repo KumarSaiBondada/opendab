@@ -1,0 +1,12 @@
+--- fec-3.0.1/fec.h.orig        2006-10-13 02:10:53.000000000 +0100
++++ fec-3.0.1/fec.h     2010-04-24 10:10:31.000000000 +0100
+@@ -264,7 +264,7 @@ void find_cpu_mode(void); /* Call this o
+ /* Determine parity of argument: 1 = odd, 0 = even */
+ #ifdef __i386__
+ static inline int parityb(unsigned char x){
+-  __asm__ __volatile__ ("test %1,%1;setpo %0" : "=g"(x) : "r" (x));
++  __asm__ __volatile__ ("test %1,%1;setpo %0" : "=q"(x) : "q" (x));
+   return x;
+ }
+ #else
+

@@ -1,0 +1,117 @@
+			    OpenDAB v.0.06
+
+			     Installation
+
+OpenDAB has been developed using a variety of Linux distributions and 
+it should compile and install perhaps with minor changes on most 
+distributions using the Linux 2.6 kernel.
+
+Pre-requisites:
+
+The following need to be installed in order to complete the build and
+installation:
+
+1. gcc - I've been using gcc version gcc version 4.4.3
+   make - sometimes it's not installed by default.
+
+2. The header files for the Linux kernel you're currently running.  Either
+   you've built the kernel yourself, in which case there's no problem
+   or you need to have installed a package containing the kernel
+   header files - Fedora has kernel-devel<version>.rpm, Debian has
+   linux-kernel-headers - other distributions no doubt have equivalent
+   packages.  This is necessary to compile the driver. Maybe later we
+   can get a driver included in the Linux kernel.
+
+3. FFTW from www.fftw.org.  I have used fftw-3.2.2.
+
+4. An MP2 player. I've been using mpg321 from mpg321.sourceforge.net.
+   The player needs to be able to (a) Cope with DAB frames since these
+   aren't yet converted to MP2 format and (b) accept input from stdin.
+
+5. The files "rsDSPa.bin" and "rsDSPb.bin" from the windows software
+   for the WaveFinder.  Put these in the same directory as the wf
+   executable.
+
+6. A PC of suitable performance.  I don't know what the minimum
+   spec needs to be but playing Radio 3 takes about 48% of the CPU
+   (according to 'top') on an old 900MHz PIII with 256Mbytes of RAM.
+   Services with lower bitrates use correspondingly fewer CPU cycles.
+   Using multiple devices will, of course, require more processor
+   power. 
+
+7. DAB+ is enabled by default - if you don't disable it then you will
+   need to install Phil Karn's fec package (fec-3.0.1) from
+   http://ka9q.net/code/fec
+   because OpenDAB uses the Reed-Solomon decoder functions provided
+   by that package.
+
+   You may find that the fec-3.0.1 package fails to compile on
+   ia32 machines with errors like this from gcc:
+
+   fec.h:267: Error: bad register name `%dil'
+
+   If so, then, after unpacking fec-3.0.1, try: 
+
+   cd fec-3.0.1
+   patch -p1 < ~/OpenDAB-0.05/patch-fec-3.0.1.txt
+   (Change the path if you unpacked OpenDAB-0.05 somewhere else)
+   then 'make' again.
+
+   I emailed Phil Karn about this but didn't get a reply.
+
+8. DAB+ playback requires an HE-AAC (AAC+) player.  I've used mplayer
+   but it doesn't appear to much like playing from stdin - it seems to 
+   be necessary to enable the -cache option but how much to allocate
+   seems to be a matter of experimentation.  Feedback on any experiences
+   with this or other players would be very useful. 
+   
+
+
+Installation:
+
+(The driver needs to be installed, but the rest of the software
+is intended for development purposes so there seemed no point
+in installing in /usr/bin etc.)
+
+1. md5sum OpenDAB-0.05.tar.gz should be the same as the
+   value posted to the dabusb list.
+
+2. Unpack the distribution: tar zxvf OpenDAB-0.05.tar.gz
+
+3. cd to OpenDAB-0.05
+
+4. If you don't want DAB+ support and wish to avoid having to
+   install the fec package then comment out the 'DABPLUS=1' 
+   line in src/Makefile.
+   Type "make"
+
+5. Install the kernel driver.  Details may vary depending on which distro
+   you're using but essentially there are two ways to do this: 
+
+   (a) cd to the "driver" directory, become root and type "/sbin/insmod
+       wavefinder.ko" You will probably also need to change the permissions
+       of the /dev/wavefinder* devices.
+       You'll need to do this after each reboot.
+
+   (b) as root:
+       cp driver/wavefinder.ko /lib/modules/[kernel version]/driver/usb/misc
+
+       for Ubuntu 10.04: cp driver/60-wavefinder.rules /etc/udev/rules.d
+
+       for Debian 4.0 etch: cp driver/60-wavefinder.rules /etc/udev/wavefinder.rules
+              ln -s /etc/udev/wavefinder.rules /etc/udev/rules.d/60-wavefinder.rules
+
+       (other distros will need something along these lines).
+
+       Run "depmod" (probably /sbin/depmod)
+       The driver should be loaded automatically and given the
+       permissions specified in the rules file on each
+       reboot or re-plug.
+
+6. Copy "rsDSPa.bin" and "rsDSPb.bin" to the src directory
+
+7. To test: cd src; ./wf | mpg321 -q -
+   
+   (or whatever command is appropriate for your MP2 player).
+
+   See the file README for further information.
