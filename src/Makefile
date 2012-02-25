@@ -20,13 +20,13 @@
 
 
 # Comment out the next line if you don't want support for DAB+.
-DABPLUS=1
+#DABPLUS=1
 
 CC=gcc
-CFLAGS= -g -Wall -O3
-LIBS=-lwfic -lrt -lfftw3 -lm
+CFLAGS= -g -Wall -O3 -I /opt/local/include
+LIBS=-lwfic -lfftw3 -lm
 WFIC=./wfic
-LIBPATH=-L $(WFIC)
+LIBPATH=-L $(WFIC) -L /opt/local/lib
 
 ifdef DABPLUS
 CFLAGS += -DDABPLUS
@@ -72,7 +72,7 @@ $(WFIC)/libwfic.a:
 	(cd wfic; make)
 
 prsgen: prsgen.c
-	$(CC) -g -o prsgen prsgen.c -lfftw3
+	$(CC) $(CFLAGS) -g -o prsgen prsgen.c $(WFIC)/libwfic.a -L /opt/local/lib -lfftw3
 
 clean:
 	rm -f $(COMMON_OBJS) $(WF_OBJS) $(WFX_OBJS) wf wfx prsgen
