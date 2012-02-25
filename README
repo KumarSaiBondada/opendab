@@ -1,196 +1,21 @@
-			    OpenDAB v.0.06 (Apr 2011)
+OpenDAB Github Mirror
+=====================
 
-For building and installation instructions, please see the file
-INSTALL.
+This is a Github mirror of the OpenDAB sources to be found at Sourceforge:
 
-OpenDAB version 0.05 is *experimental software* that should allow the
-Psion WaveFinder to be used under the Linux 2.6 kernel.  It is free
-software distributed under version 3 of the GPL. It has been built
-on BDB's wfic (and work to understand the format of the packets
-returned from the WaveFinder) - I've incorporated the wfic functions
-as a library. I also made extensive use of Chris Chatfield's Dabble
-program for gnireenigne.
+  http://sourceforge.net/projects/opendab/
 
-OpenDAB is primarily intended to allow further development and is not
-yet properly usable (see below).
-
-IMPORTANT: You should note that at the moment there are serious
-limitations on what the software can do and that you use it at your
-own risk.  In particular please be aware that since it is necessary to
-install a kernel driver, problems which may occur could be of a
-serious nature.
-
-There are a number of ways to use the software:
-
-1) Listen to DAB audio service.  The WaveFinder is configured so that it
-   only sends the necessary symbols via the USB. DAB frames are
-   written to stdout for decoding by a separate program,
-   for example mpg321. The frequency defaults to 225.648MHz (BBC National DAB)
-   so the simplest form of operation is:
-   
-   ./wf | mpg321 -q -
-
-   to try a different frequency for example:
-
-   ./wf 227.064 | mpg321 -q -
-
-   (omit the "-q" option to mpg321 if you want to see the info from
-   that program).
-
-   The green LED on the WaveFinder should illuminate and the messages:
-
-       Initialization complete.
-       Sync locked.
-
-   Should appear - the words "complete" and "locked" are printed when
-   these events seem to have occured in order to give an indication of
-   progress.
-   There will be a delay of a few seconds while the MCI is aquired, then
-   you should see something like this:
-
-BBC National DAB (0xce15)
- 0 : BBC Radio 1      (0xc221) Pri subch= 1 start=  0 CUs= 96 PL=uep 3 bitrate=128
- 1 : BBC Radio 2      (0xc222) Pri subch= 2 start= 96 CUs= 96 PL=uep 3 bitrate=128
- 2 : BBC Radio 3      (0xc223) Pri subch= 3 start=192 CUs=140 PL=uep 3 bitrate=192
- 3 : <No label>       (0xc224) Pri subch= 4 start=332 CUs= 96 PL=uep 3 bitrate=128
- 4 : <No label>       (0xc225) Pri subch= 5 start=428 CUs= 58 PL=uep 3 bitrate=80
- 5 : BBC Radio 1Xtra  (0xc22a) Pri subch=10 start=582 CUs= 96 PL=uep 3 bitrate=128
- 6 : BBC Radio 6Music (0xc22b) Pri subch=11 start=678 CUs= 96 PL=uep 3 bitrate=128
- 7 : BBC Radio 7      (0xc22c) Pri subch=12 start=774 CUs= 58 PL=uep 3 bitrate=80
- 8 : BBC AsianNetwork (0xc236) Pri subch= 7 start=486 CUs= 48 PL=uep 3 bitrate=64
- 9 : BBC WorldService (0xc238) Pri subch= 9 start=534 CUs= 48 PL=uep 3 bitrate=64
-Please select a service (0 to 9):
-
-   Type an appropriate number, press return and the corresponding audio should be heard.
-   Secondary (audio) services, if present, will be shown and may be selected (see NOTES).
-   Type ctrl-c to finish (the signal is caught for a clean exit).
-   If service labels haven't been received then <No label> and the service ID is shown
-   (as for services 3 and 4 in the example above).  You can increase MAXFIBS
-   (and wait longer) if you don't like this.  If you don't want the green LED
-   to come on, then comment out or delete the obvious line in wfinit.c . 
-   You can use tee to save the output to a file at the same time as listening.
-
-   The option "-w" enables a different WaveFinder device to be used:
-   this allows multiple WaveFinders to be connected to the same
-   computer (eg. ./wf -w /dev/wavefinder1 | mpg321 -q -).
-   The option "-f" should create a file "fic.dat" containing FIC data which can
-   be read by a standalone FIC decoder, for example ficdec.
-   The option "-h" gives brief help.
+The initial import was from v0.06 of the OpenDAB tarball release. 
 
 
-2) Dump the entire ensemble to a file for later processing. Use the
-   "-d" option.  For example: 
+Copyright and Licencing
+-----------------------
 
-   ./wf -d raw.strm 227.064
+These sources are generally licenced under the GPL, v3:
 
-   should generate a file "raw.strm" containing a (binary) dump of the undecoded
-   symbols (2-76) from the WaveFinder.  This file can become quite large.
-   Again, the messages:
-   Initialization complete.
-   Sync locked.
+  Copyright (C) 2005-2010 David Crawley <degressive@yahoo.co.uk>
 
-   Should appear. Type ctrl-c to finish.
+except for viterbi.c, which is licenced under the GPL:
 
-   Audio services can then be extracted by typing:
+  Copyright 1999 Phil Karn, KA9Q
 
-   ./wfx raw.strm | mpg321 -q -
-
-   A list of audio services should appear similar to that shown above,
-   but the file is scanned until either all services have been labelled
-   or the end of the file is reached.  Once an audio service is selected,
-   decoding starts from near the beginning of the file (FSKIP symbols are
-   skipped because they are almost certain to be unusable). You may find
-   mpg321 sometimes objects with a "error: giving up resync - your stream
-   is not nice..." message; if so you might try extracting to a file and
-   then running mpg321 using the file instead - it seems to be better
-   able to resync this way.
-   So try:
-   
-   ./wfx raw.strm > dab.frames
-   ...select service, wait quite a long time until it finishes...
-   mpg321 dab.frames
-
-3) Listen to a DAB+ audio service.
-   Since I'm in the UK where we don't have DAB+ I've only been able to test (using
-   'wfx') playing back the Australian stream that Simon Rumble so kindly made available.
-   In theory, though:
-
-   This is similar to 1 above but I think you will need to decide in advance that
-   you want to listen to a DAB+ service as mplayer didn't seem to want to play 
-   the mp2 services.
-
-   Try
-
-   ./wf <freq> | mplayer -cache 512 -
-
-   (0x2010)
- 0 :         Nova 969 (0x2014) Pri subch= 3 start=  0 CUs=140 PL=uep 3 bitrate=192
- 1 :        VEGA 95.3 (0x2018) Pri subch= 5 start=140 CUs=140 PL=uep 3 bitrate=192
- 2 :        Supafresh (0x2016) Pri subch= 4 start=286 CUs=140 PL=uep 3 bitrate=192
- 3 :  2CH - Easy 1170 (0x2017) Pri subch=10 start=426 CUs= 36 PL=eep-3a bitrate=48 DAB+
- 4 :              2SM (0x2011) Pri subch= 0 start=462 CUs=140 PL=uep 3 bitrate=192
-Please select a service (0 to 4):
-
-DAB+ services should be flagged 'DAB+' as in service 3 above - select this service
-and, after filling the cache, mplayer might play it.  mplayer seems to produce a lot
-of messages which don't seem to be suppressed with the '-quiet' option, in particular
-you may find the 'Please select...' line is overwritten by a constantly updating
-'Cache fill:  0.00% (0 bytes)   )' message - pay no attention and type the appropriate
-number. mplayer should show the cache being filled etc. and audio should eventually be
-heard.
-
-Feedback on changing the options to mplayer or using alternative players would be most
-welcome.
-
-Otherwise, things should generally be similar to 1) and 2) above.
-
-
-NOTES:
-
-At the moment only a crude command-line interface is provided and the
-software does _not_:
-
-a) Handle multiplex reconfiguration.  If the multiplex is reconfigured
-   while you are listening to a service then you will suddenly be
-   confronted with unintelligble noise, or perhaps the mp2 player will
-   object and stop.
-   
-   In fact, at the moment, having aquired the necessary info to decode
-   the required symbols from the MSC, the software doesn't continue to
-   process the FIC at all.
-
-b) Fully decode the DAB audio frames.  The frames are sent direct to stdout
-   without checking the scale factor CRCs or removing PAD data. This
-   means that errors are not masked so there will probably be more
-   nasty noises than there should be.  Some basic MP2 header checks are
-   now included (from v.0.03) but are at a preliminary and incomplete stage.
-
-c) Handle modes other than Mode I.
-
-d) Store any configuration information.  When it starts, the FIC is
-   processed until all the audio services have been labelled or until
-   "MAXFIBS" FIBS have been received.  Also, the selected service
-   can't be changed without restarting.
-
-e) Handle anything other than audio services.
-
-
-These limitations probably won't be too hard to fix but the first
-priority is to fully understand and replace the synchronization
-function which is derived from that used in the windows software.  I
-cannot be certain that it works correctly (in fact, I'm almost sure it
-sometimes drifts off after several minutes). It MUST be replaced.
-
-Things that need to be, or could be, done (in no particular order,
-except item 1):
-
-1. Replace sync mechanism. 
-2. Remove the current limitations. Tidy up code.
-   Change the organization so there's a library of functions with a
-   sensible API (compatibility with viadab ?). Make multi-threaded ?
-3. Speed up Viterbi decoder and add ability to estimate BER.
-4. Add GUI. Handle EPG.
-5. Add the ability to do a real-time plot of the channel impulse response.
-6. It looks like the null symbol is sent from the WaveFinder, so it might
-   be interesting to see if TII decoding is possible.
-7. Add support for other hardware...
