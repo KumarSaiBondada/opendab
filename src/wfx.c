@@ -111,12 +111,12 @@ int main(int argc, char **argv)
 	user_select_service(&einf, &sel_srv);
         startsym(&sel_srv.sr, sel_srv.sch);
         cbuf = init_cbuf(&sel_srv.sr);
-
+        
 	while (!feof(ifp)) {
 		cnt = fread(pktbuf, 524, 1, ifp);
 		if ((f++ > FSKIP) && (cnt == 1) && (*pktbuf == 0x0c) && (*(pktbuf+1) == 0x62)) {
                         if ((sel_srv.sch != NULL) && (*(pktbuf+2) > 4)) {
-                                msc_assemble(cbuf, pktbuf, sel_srv.sch, &sel_srv.sr);
+                                msc_assemble(cbuf, pktbuf, &sel_srv);
                         }
                 }
 	}

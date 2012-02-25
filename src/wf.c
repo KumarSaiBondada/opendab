@@ -191,8 +191,9 @@ int main (int argc, char **argv)
 							disp_ensemble(&einf);
 							enslistvisible = 1;
 						}
-						if (sel_srv.sch == NULL)
-							user_select_service(&einf, &sel_srv);
+						if (sel_srv.sch == NULL) {
+                                                        user_select_service(&einf, &sel_srv);
+                                                }
 						else {
 							if (!selected && (sel_srv.sch->subchid < 64)) {
 								startsym(&sel_srv.sr, sel_srv.sch);
@@ -204,7 +205,7 @@ int main (int argc, char **argv)
 								fprintf(stderr,"Type ctrl-c to quit\n");
 							}
 							if ((synccnt == 0) && (*(rdbuf+2+k) > 4))
-                                                          msc_assemble(cbuf, rdbuf+k, sel_srv.sch, &sel_srv.sr);
+                                                                msc_assemble(cbuf, rdbuf+k, &sel_srv);
 						}
 					}
 				}

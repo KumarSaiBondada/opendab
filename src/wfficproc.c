@@ -240,6 +240,8 @@ int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
 			while (p != NULL) {
 				if ((j == i) || ((j == i - 1) && (p->sa != NULL))) {
 					sel_srv->sid = p->sid;
+                                        sel_srv->cur_frame = 0;
+                                        sel_srv->cifcnt = 0;
 					if ((j == i - 1) && (p->sa != NULL))
 						sel_srv->sch = p->sa;
 					else

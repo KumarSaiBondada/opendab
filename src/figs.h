@@ -98,6 +98,8 @@ struct selsrv {
 	struct subch *sch;
 	struct symrange sr; 
 	int sid;
+	unsigned int cur_frame;
+        unsigned int cifcnt;
 };
 
 /* FIG Header */

@@ -201,46 +201,45 @@ int msc_decode(struct cbuf *cbuf, struct subch *s, struct symrange *sr)
 ** after frequency deinterleaving, to a circular buffer.
 ** Complete processing once buffer is full. 
 */ 
-int msc_assemble(struct cbuf *cbuf, unsigned char *symbuf, struct subch *s, struct symrange *sr)
+int msc_assemble(struct cbuf *cbuf, unsigned char *symbuf, struct selsrv *srv)
 {
 	unsigned char sym, frame;
 	unsigned char fbuf[BITSPERSYM];
 	int j, symspercif, buffer_full = 0;
-	static unsigned int cur_frame, cifcnt = 0;
 
-	symspercif = sr->end[0] - sr->start[0];
+	symspercif = srv->sr.end[0] - srv->sr.start[0];
 
 	sym = *(symbuf+2);
 	frame = *(symbuf+3);
 
-	if (sym == sr->start[0]) {
-		cur_frame = frame;
+	if (sym == srv->sr.start[0]) {
+		srv->cur_frame = frame;
 		freq_deinterleave(fbuf, symbuf+12);
-		buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, sr);
+		buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, &srv->sr);
 	} else {
 		for (j=1; j < 4; j++)
-			if (sym == sr->start[j]) {
-				if (frame != cur_frame) {
+			if (sym == srv->sr.start[j]) {
+				if (frame != srv->cur_frame) {
 					reset_cbuf(cbuf);
 				} else {
 					freq_deinterleave(fbuf, symbuf+12);
-					buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, sr);
+					buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, &srv->sr);
 				}
 			}
 		for (j=0; j < 4; j++)
-			if ((sym > sr->start[j]) && (sym <= sr->end[j])) {
-				if (frame != cur_frame) {
+			if ((sym > srv->sr.start[j]) && (sym <= srv->sr.end[j])) {
+				if (frame != srv->cur_frame) {
                                         reset_cbuf(cbuf);
 				} else {
 					freq_deinterleave(fbuf, symbuf+12);
-					buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, sr);
-					if (sym == sr->end[j])
-						cifcnt++;
+					buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, &srv->sr);
+					if (sym == srv->sr.end[j])
+						srv->cifcnt++;
 				}
 			}
 	}
 	if (buffer_full)
-		msc_decode(cbuf, s, sr);
+		msc_decode(cbuf, srv->sch, &srv->sr);
 
 	return 0;
 }
