@@ -75,6 +75,23 @@ struct usb_ctrlrequest {
 /* Size of read buffer */
 #define PIPESIZE 16768
 
+struct cbuf *init_cbuf(struct symrange *sr);
+
+struct blist {
+	unsigned char* data;
+	int syms;
+	int index;
+	struct blist *next;
+};
+
+struct cbuf {
+        struct blist cb[16];
+	struct blist *lfp; 
+	int lframe;
+        int full;
+        int head;
+};
+
 int wfmp2(unsigned char *buf, int len, int bitrate);
 
 void wf_time(struct timespec *tp);
@@ -83,7 +100,7 @@ int wfinitrs();
 int wfdabplusdec(unsigned char *sfbuf, unsigned char *ibuf, int ibytes, int bitrate);
 
 int prs_assemble(int fd, unsigned char *rdbuf, unsigned char *prsbuf, unsigned char *selstr, int i);
-int msc_assemble(unsigned char *symbuf, struct subch *s, struct symrange *sr);
+int msc_assemble(struct cbuf *cbuf, unsigned char *symbuf, struct subch *s, struct symrange *sr);
 int fic_assemble(unsigned char* rdbuf, unsigned char* ficsyms, unsigned char* rawfibs, FILE *ofp);
 int startsym(struct symrange *r, struct subch *s);
 int ficinit(struct ens_info *e);

@@ -30,79 +30,71 @@
 #include "wfic/wfic.h"
 #include "opendab.h"
 
-struct blist {
-	unsigned char* data;
-	int syms;
-	int index;
-	struct blist *next;
-};
-
-static struct blist cb[16];
-static int head = 0;   /* index of 1st logical frame in blist */
-
 /*
 ** Initialize circular buffer
 */ 
-int init_cbuf(struct symrange *sr)
+struct cbuf *init_cbuf(struct symrange *sr)
 {
 	int i;
+        struct cbuf *cbuf;
+
+        if ((cbuf = malloc(sizeof(struct cbuf))) == NULL)
+                perror("init_cbuf malloc failed");
 
 	for (i = 0; i < 16; i++) {
-		cb[i].next = &cb[(i+1) % 16];
-		if ((cb[i].data = malloc(sizeof(unsigned char) * sr->numsyms * BITSPERSYM)) == NULL)
+		cbuf->cb[i].next = &cbuf->cb[(i+1) % 16];
+		if ((cbuf->cb[i].data = malloc(sizeof(unsigned char) * sr->numsyms * BITSPERSYM)) == NULL)
 			perror("init_cbuf malloc failed");
-		cb[i].syms = 0;
-		cb[i].index = i;
+		cbuf->cb[i].syms = 0;
+		cbuf->cb[i].index = i;
 	}
-	return 0;
+
+        cbuf->lfp = &cbuf->cb[0];
+        cbuf->head = 0;
+        cbuf->full = 0;
+
+	return cbuf;
 }
 
 /*
-** Write to, or reset, circular buffer
-*/ 
-int wcbuf(unsigned char *symdata, int len, struct symrange *sr, int reset)
+ * Reset a circular buffer
+ */
+void reset_cbuf(struct cbuf *cbuf)
 {
-	static struct blist *lfp; 
-	static int lframe, first = 1, full = 0;
-	int i, frame_complete = 0;
+        int i;
 
-	if (reset) {
-		/* printf("wcbuf: reset\n"); */
-		lframe = 0;
-		lfp = &cb[0];
-		head = 0;
-		full = 0;
-		for (i=0; i < 16; i++)
-			cb[i].syms = 0;
-	} else {
-		if (first) {
-			/* printf("wcbuf: init\n"); */
-			init_cbuf(sr);
-			lframe = 0;
-			lfp = &cb[0];
-			first = 0;
-			head = 0;
-		}
+        cbuf->lframe = 0;
+        cbuf->lfp = &cbuf->cb[0];
+        cbuf->head = 0;
+        cbuf->full = 0;
+        for (i=0; i < 16; i++)
+                cbuf->cb[i].syms = 0;
+}
 
-		if (cb[lframe].syms == sr->numsyms) {
-			head = (head + 1) % 16;
-			lfp = cb[lframe].next; /* Next logical frame */
-			lframe = lfp->index;
-			cb[lframe].syms = 0;
-		}
-		if (cb[lframe].syms < sr->numsyms) {
-		  /*printf("wcbuf: insert lframe=%d, cb[lframe].syms=%d, head=%d\n",lframe,cb[lframe].syms,head);*/
-			memcpy(cb[lframe].data + cb[lframe].syms * BITSPERSYM, symdata, len);
-			cb[lframe].syms++;
-			if (cb[lframe].syms == sr->numsyms)
-				frame_complete = 1;
-		}
+/*
+ * Write to a circular buffer
+ */ 
+int write_cbuf(struct cbuf *cbuf, unsigned char *symdata, int len, struct symrange *sr)
+{
+        int frame_complete = 0;
+        
+        if (cbuf->cb[cbuf->lframe].syms == sr->numsyms) {
+                cbuf->head = (cbuf->head + 1) % 16;
+                cbuf->lfp = cbuf->cb[cbuf->lframe].next; /* Next logical frame */
+                cbuf->lframe = cbuf->lfp->index;
+                cbuf->cb[cbuf->lframe].syms = 0;
+        }
+        if (cbuf->cb[cbuf->lframe].syms < sr->numsyms) {
+                memcpy(cbuf->cb[cbuf->lframe].data + cbuf->cb[cbuf->lframe].syms * BITSPERSYM, symdata, len);
+                cbuf->cb[cbuf->lframe].syms++;
+                if (cbuf->cb[cbuf->lframe].syms == sr->numsyms)
+                        frame_complete = 1;
+        }
+        
+        if (cbuf->lframe == 15)
+                cbuf->full = 1;
 
-		/* Note that 'full' is declared static */
-		if (lframe == 15)
-			full = 1;
-	}
-	return (full && frame_complete);
+        return (cbuf->full && frame_complete);
 }
 
 /*
@@ -129,14 +121,14 @@ int freq_deinterleave(unsigned char *obuf, unsigned char *cbuf)
 **
 ** Writes a single logical frame to obuf.
 */
-int time_disinterleave(unsigned char *obuf, int subchsz, struct symrange *sr)
+int time_disinterleave(struct cbuf *cbuf, unsigned char *obuf, int subchsz, struct symrange *sr)
 {
 	int i, cif;
 	const int map[] = {0,8,4,12,2,10,6,14,1,9,5,13,3,11,7,15};
 
 	for (i=0; i < (subchsz * BITSPERCU); i++) {
 		cif = map[i % 16];
-		*(obuf+i) = *(cb[(head + cif) % 16].data + BITSPERCU * sr->startcu + i);
+		*(obuf+i) = *(cbuf->cb[(cbuf->head + cif) % 16].data + BITSPERCU * sr->startcu + i);
 	}
 	return 0;
 }
@@ -144,7 +136,7 @@ int time_disinterleave(unsigned char *obuf, int subchsz, struct symrange *sr)
 /*
 ** Finish decoding the frames from the circular buffer.
 */
-int msc_decode(struct subch *s, struct symrange *sr)
+int msc_decode(struct cbuf *cbuf, struct subch *s, struct symrange *sr)
 {
 /* Constraint length */
 #define N 4
@@ -180,7 +172,7 @@ int msc_decode(struct subch *s, struct symrange *sr)
 		
 	}
 		
-	time_disinterleave(lf, s->subchsz, sr);
+	time_disinterleave(cbuf, lf, s->subchsz, sr);
 	if (s->eepprot)
 		eep_depuncture(dpbuf, lf, s, &len);
 	else
@@ -209,7 +201,7 @@ int msc_decode(struct subch *s, struct symrange *sr)
 ** after frequency deinterleaving, to a circular buffer.
 ** Complete processing once buffer is full. 
 */ 
-int msc_assemble(unsigned char *symbuf, struct subch *s, struct symrange *sr)
+int msc_assemble(struct cbuf *cbuf, unsigned char *symbuf, struct subch *s, struct symrange *sr)
 {
 	unsigned char sym, frame;
 	unsigned char fbuf[BITSPERSYM];
@@ -224,31 +216,31 @@ int msc_assemble(unsigned char *symbuf, struct subch *s, struct symrange *sr)
 	if (sym == sr->start[0]) {
 		cur_frame = frame;
 		freq_deinterleave(fbuf, symbuf+12);
-		buffer_full = wcbuf(fbuf, BITSPERSYM, sr, 0);
+		buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, sr);
 	} else {
 		for (j=1; j < 4; j++)
 			if (sym == sr->start[j]) {
 				if (frame != cur_frame) {
-					wcbuf(NULL, 0, sr, 1); /* Reset buffer */
+					reset_cbuf(cbuf);
 				} else {
 					freq_deinterleave(fbuf, symbuf+12);
-					buffer_full = wcbuf(fbuf, BITSPERSYM, sr, 0);
+					buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, sr);
 				}
 			}
 		for (j=0; j < 4; j++)
 			if ((sym > sr->start[j]) && (sym <= sr->end[j])) {
 				if (frame != cur_frame) {
-					wcbuf(NULL, 0, sr, 1); /* Reset buffer */
+                                        reset_cbuf(cbuf);
 				} else {
 					freq_deinterleave(fbuf, symbuf+12);
-					buffer_full = wcbuf(fbuf, BITSPERSYM, sr, 0);
+					buffer_full = write_cbuf(cbuf, fbuf, BITSPERSYM, sr);
 					if (sym == sr->end[j])
 						cifcnt++;
 				}
 			}
 	}
 	if (buffer_full)
-		msc_decode(s, sr);
+		msc_decode(cbuf, s, sr);
 
 	return 0;
 }

@@ -54,6 +54,7 @@ int main (int argc, char **argv)
 	/* double freq = 223.936;*/
 	double freq = 225.648; /* BBC */
 	/* double freq = 227.360;*/
+        struct cbuf *cbuf;
 
 	
         nargs = argc;
@@ -195,13 +196,15 @@ int main (int argc, char **argv)
 						else {
 							if (!selected && (sel_srv.sch->subchid < 64)) {
 								startsym(&sel_srv.sr, sel_srv.sch);
+                                                                cbuf = init_cbuf(&sel_srv.sr);
+
 								wfsymsel(selstr, &sel_srv.sr);
 								selected = 1;
 								synccnt = 6;
 								fprintf(stderr,"Type ctrl-c to quit\n");
 							}
 							if ((synccnt == 0) && (*(rdbuf+2+k) > 4))
-                                                          msc_assemble(rdbuf+k, sel_srv.sch, &sel_srv.sr);
+                                                          msc_assemble(cbuf, rdbuf+k, sel_srv.sch, &sel_srv.sr);
 						}
 					}
 				}
