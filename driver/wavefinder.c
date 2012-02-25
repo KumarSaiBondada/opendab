@@ -24,6 +24,7 @@
  */
 /*****************************************************************************/
 
+#include <linux/version.h>
 #include <linux/module.h>
 #include <linux/socket.h>
 #include <linux/list.h>
@@ -34,7 +35,9 @@
 #include <asm/atomic.h>
 #include <linux/delay.h>
 #include <linux/usb.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(2, 6, 38)
 #include <linux/smp_lock.h>
+#endif
 
 #include "wavefinder.h"
 
