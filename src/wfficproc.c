@@ -82,13 +82,13 @@ struct service* find_service(struct ens_info *e, int sid)
 /*
 ** Append an audio service to the list if it isn't already known
 */
-int add_service(struct ens_info *e, struct mscstau *ac, int sid)
+int add_audio_service(struct ens_info *e, struct mscstau *ac, int sid)
 {
 	struct service *s, *ptr;
 
 	if ((s = find_service(e, sid)) == (struct service*)NULL) {
 		if ((s = (struct service*)malloc(sizeof(struct service))) == NULL)
-			perror("add_service: malloc failed"); 
+			perror("add_audio_service: malloc failed"); 
 		s->label[0] = '\0';
 		s->sid = sid;
 		s->next = NULL;
@@ -122,12 +122,61 @@ int add_service(struct ens_info *e, struct mscstau *ac, int sid)
 				e->num_srvs++;
 			}
 #if DEBUG > 0
-		fprintf(stderr,"add_service: sid=%#08x subchan=%d pri=%d\n",sid,ac->SubChId,ac->Primary);
+		fprintf(stderr,"add_audio_service: sid=%#08x subchan=%d pri=%d\n",sid,ac->SubChId,ac->Primary);
 #endif
 	}
 #if DEBUG > 0
 	else
-		fprintf(stderr,"add_service: Service %#08x already known\n",sid);
+		fprintf(stderr,"add_audio_service: Service %#08x already known\n",sid);
+#endif
+	return 0;
+}
+
+/*
+** Append a data service to the list if it isn't already known
+*/
+int add_data_service(struct ens_info *e, struct mscpktdat *dt, int sid)
+{
+	struct service *s, *ptr;
+
+	if ((s = find_service(e, sid)) == (struct service*)NULL) {
+		if ((s = (struct service*)malloc(sizeof(struct service))) == NULL)
+			perror("add_data_service: malloc failed"); 
+		s->label[0] = '\0';
+		s->sid = sid;
+		s->next = NULL;
+		s->pa = NULL;
+		s->sa = NULL;
+		if ((ptr = e->srv) == NULL) {
+			e->srv = s;
+			s->next = NULL;
+			s->prev = NULL;
+		} else
+			while (ptr != NULL)
+				if (ptr->next == NULL) {
+					ptr->next = s;
+					s->prev = ptr;
+					break;
+				} else
+					ptr = ptr->next;
+	}
+
+	if ((dt->Primary && (s->pa == NULL)) || (!(dt->Primary) && (s->sa == NULL))) {
+		if (dt->Primary && (s->pa == NULL)) {
+			s->pa = &e->schan[dt->SCId];
+			e->num_srvs++;
+		} else
+			if (!(dt->Primary) && (s->sa == NULL)) {
+				s->sa = &e->schan[dt->SCId];
+				e->num_srvs++;
+			}
+#if DEBUG > 0
+		fprintf(stderr,"add_data_service: sid=%#08x sc=%d pri=%d\n",sid,dt->SCId,dt->Primary);
+#endif
+	}
+#if DEBUG > 0
+	else
+		fprintf(stderr,"add_data_service: Service %#08x already known\n",sid);
 #endif
 	return 0;
 }

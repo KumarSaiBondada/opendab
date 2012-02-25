@@ -302,7 +302,7 @@ int fig_0_2(int figlen, int pd, int oe, int cn, unsigned char* fig)
 					scdp.maup.TMId,scdp.maup.ASCTy,scdp.maup.SubChId,
 					scdp.maup.Primary,scdp.maup.CAFlag);
 #endif
-				add_service(&einf, &scdp.maup, sid);
+				add_audio_service(&einf, &scdp.maup, sid);
 				break;
 			case 1:
 #if DEBUGd > 0
@@ -324,6 +324,7 @@ int fig_0_2(int figlen, int pd, int oe, int cn, unsigned char* fig)
 					scdp.mpkp.TMId,scdp.mpkp.SCId,scdp.mpkp.Primary,
 					scdp.mpkp.CAFlag);
 #endif
+				add_data_service(&einf, &scdp.mpkp, sid);
 				break;
 			default:
 				fprintf(stderr, "fig_0_2: error out of range TMId = %d\n",scdp.maup.TMId);
@@ -527,13 +528,18 @@ int fig_1_4(int figlen,  int oe, int charset, unsigned char* fig)
 */
 int fig_1_5(int figlen,  int oe, int charset, unsigned char* fig)
 {
+	struct service *s;
 	struct dsl *f;
 
 	f = (struct dsl*)fig;
 	f->label[16] = '\0';
+        f->SId = ipack(fig);
 #if DEBUG > 0
-	fprintf(stderr, "fig_1_5: SId=%#08hx, label=%s chflag=%#04hx\n",f->SId,f->label,f->CharFlgFld);
+	fprintf(stderr, "fig_1_5: SId=%#08x, label=%s chflag=%#04hx\n",f->SId,f->label,f->CharFlgFld);
 #endif
+	if ((s = find_service(&einf, f->SId)) != NULL)
+		strncpy(s->label, f->label, 17);
+
 	return 0;
 }
 
@@ -545,6 +551,9 @@ int unpickfig(unsigned char* fig, int figlen)
 {
 	int len, typ;
 	struct fig_hdr *f;
+#if DEBUG > 0
+	fprintf(stderr, "\nbegin unpick:\n");
+#endif
 #if DEBUG > 1
 	int i;  
 	fprintf(stderr, "unpickfig: ");

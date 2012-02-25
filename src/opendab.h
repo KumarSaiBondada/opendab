@@ -110,7 +110,8 @@ int unpickfig(unsigned char* fig, int figlen);
 int user_select_service(struct ens_info* e, struct selsrv *sel_srv);
 int disp_ensemble(struct ens_info* e);
 struct service* find_service(struct ens_info *e, int sid);
-int add_service(struct ens_info *e, struct mscstau *ac, int sid);
+int add_audio_service(struct ens_info *e, struct mscstau *ac, int sid);
+int add_data_service(struct ens_info *e, struct mscpktdat *dt, int sid);
 int add_subchannel(struct ens_info *e, struct subch *s);
 int labelled(struct ens_info *e);
 
