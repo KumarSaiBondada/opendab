@@ -82,3 +82,31 @@ int eep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch
 	*len = k;
 	return 0;
 }
+
+int eep_depuncture_data(unsigned char *obuf, unsigned char *inbuf, struct data_subch *s, int* len)
+{
+	int i, j, k, n, indx;
+
+        const struct eepprof p = {
+                6, 8, {{6, -3}, {0, 3}}, {7, 6}
+        };
+
+	j = 0;
+	k = 0;
+	n = s->subchsz/p.sizemul;
+	for (indx=0; indx < 2; indx++)
+		for (i=0; i < BLKSIZE * (p.l[indx].mul * n + p.l[indx].offset); i++) {
+			if (pvec[p.pi[indx]][i % 32])
+				*(obuf + k++) = OFFSET - 1 + (*(inbuf + j++) << 1);
+			else
+				*(obuf + k++) = OFFSET;
+		}
+	/* Depuncture remaining 24 bits using rate 8/16 */ 
+	for (i=0; i < 24; i++)
+		if (pvec[7][i % 32])
+			*(obuf + k++) = OFFSET - 1 + (*(inbuf + j++) << 1);
+		else
+			*(obuf + k++) = OFFSET;
+	*len = k;
+	return 0;
+}

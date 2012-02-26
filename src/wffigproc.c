@@ -208,6 +208,8 @@ int fig_0_1(int figlen, int pd, int oe, int cn, unsigned char* fig)
                         dt.subchid = sl.lf.SubChId;
                         dt.startaddr = sl.lf.StartAddr;
 			dt.subchsz = sl.lf.SubChSz;
+			dt.protlvl = sl.lf.ProtLvl;
+                        dt.opt = sl.lf.Opt;
 #if DEBUG > 0
 			fprintf(stderr, "subchsz = %d\n", dt.subchsz);
 #endif

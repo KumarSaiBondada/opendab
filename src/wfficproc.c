@@ -293,7 +293,8 @@ int disp_ensemble(struct ens_info* e)
 			}
 		}
                 if (p->dt != NULL) {
-                        fprintf(stderr, "Data subch=%2d start=%2d CUs=%3d SCId=%d PktAddr=%d", p->dt->subch->subchid, p->dt->subch->startaddr, p->dt->subch->subchsz, p->scid, p->dt->pktaddr);
+                        fprintf(stderr, "Data subch=%2d start=%2d CUs=%3d ", p->dt->subch->subchid, p->dt->subch->startaddr, p->dt->subch->subchsz);
+                        fprintf(stderr, "SCId=%d PktAddr=%d ProtLvl=%d Opt=%d", p->scid, p->dt->pktaddr, p->dt->subch->protlvl, p->dt->subch->opt);
                 }
 		fprintf(stderr,"\n");
 		fflush(stderr);

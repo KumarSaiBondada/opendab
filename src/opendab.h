@@ -121,6 +121,7 @@ int labelled(struct ens_info *e);
 
 int uep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len);
 int eep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len);
+int eep_depuncture_data(unsigned char *obuf, unsigned char *inbuf, struct data_subch *s, int* len);
 
 int crc16check(unsigned char* buf, int len);
 int crccheck(unsigned char* buf, int len);

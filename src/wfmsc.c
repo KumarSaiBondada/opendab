@@ -161,7 +161,7 @@ int msc_decode(struct selsrv *srv)
         if (au != NULL)
                 subchsz = au->subchsz;
         if (dt != NULL)
-                subchsz = 1;
+                subchsz = dt->subch->subchsz;
 
 	if (init) {
 		init = 0;
@@ -195,6 +195,9 @@ int msc_decode(struct selsrv *srv)
                 else
                         uep_depuncture(dpbuf, lf, au, &len);
         }
+        if (dt != NULL) {
+                eep_depuncture_data(dpbuf, lf, dt->subch, &len);
+        }        
 	
 	/* BDB's wfic functions: */
 	bits = len/N - (K - 1);

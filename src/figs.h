@@ -66,6 +66,8 @@ struct data_subch {
 	int subchid;
         int startaddr;
 	int subchsz;
+	int protlvl;
+        int opt;
 };
 
 /* Used for sub-channel symbol extraction -
