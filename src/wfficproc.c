@@ -37,7 +37,7 @@
 ** 1 - print some info
 ** 2 - ...and dump raw bytes
 */
-#define DEBUG 1
+#define DEBUG 0
 
 int wfgetnum(char *);
 struct ens_info einf;

@@ -133,8 +133,26 @@ int time_disinterleave(struct cbuf *cbuf, unsigned char *obuf, int subchsz, stru
 	return 0;
 }
 
+struct packet {
+        unsigned PacketLen     : 2;
+        unsigned ContIndex     : 2;
+        unsigned FirstLast     : 2;
+        unsigned Address       : 10;
+        unsigned Command       : 1;
+        unsigned UsefulDataLen : 7;
+};
+
 int wfdata(unsigned char *buf, int len, FILE *dest) {
-        fwrite(buf, len, 1, dest);
+        struct packet p;
+        
+	memcpy(&p, buf, sizeof(struct packet));
+        fprintf(stdout, "packetlen=%d datalen=%d cmd=%d addr=%d firstlast=%d contindex=%d\n\n",
+                p.PacketLen, p.UsefulDataLen, p.Command, p.Address, p.FirstLast, p.ContIndex);
+
+        fwrite(buf + 3, p.UsefulDataLen, 1, dest);
+
+        fprintf(stdout, "\n\n");
+
         return 0;
 }
 
