@@ -37,7 +37,7 @@
 ** 1 - print some info
 ** 2 - ...and dump raw bytes
 */
-#define DEBUG 0
+#define DEBUG 1
 
 int wfgetnum(char *);
 struct ens_info einf;
@@ -53,7 +53,7 @@ int ficinit(struct ens_info *e)
 	e->num_srvs = 0;
 	e->srv = NULL;
 	for (j=0; j < 64; j++)
-		e->schan[j].subchid = 0xffff; /* Mark unused entries */
+		e->schan[j].au.subchid = 0xffff; /* Mark unused entries */
 
 	return 0;
 }
@@ -80,6 +80,27 @@ struct service* find_service(struct ens_info *e, int sid)
 }
 
 /*
+** Run through list and try to find entry with given service id
+*/
+struct service* find_service_by_scid(struct ens_info *e, int scid)
+{
+	char found = 0;
+	struct service *s;
+	s = e->srv;
+	while (s != NULL) {
+		if (s->scid == scid) {
+			found = 1;
+			break;
+		} else
+			s = s->next;
+	};
+	if (found)
+		return s;
+	else
+		return (struct service*)NULL;
+}
+
+/*
 ** Append an audio service to the list if it isn't already known
 */
 int add_audio_service(struct ens_info *e, struct mscstau *ac, int sid)
@@ -91,6 +112,7 @@ int add_audio_service(struct ens_info *e, struct mscstau *ac, int sid)
 			perror("add_audio_service: malloc failed"); 
 		s->label[0] = '\0';
 		s->sid = sid;
+                s->scid = 0;
 		s->next = NULL;
 		s->pa = NULL;
 		s->sa = NULL;
@@ -108,17 +130,17 @@ int add_audio_service(struct ens_info *e, struct mscstau *ac, int sid)
 					ptr = ptr->next;
 	}
 	if (ac->ASCTy == 0x3f)
-		e->schan[ac->SubChId].dabplus = 1;
+		e->schan[ac->SubChId].au.dabplus = 1;
 	else
-		e->schan[ac->SubChId].dabplus = 0;
+		e->schan[ac->SubChId].au.dabplus = 0;
 
 	if ((ac->Primary && (s->pa == NULL)) || (!(ac->Primary) && (s->sa == NULL))) {
 		if (ac->Primary && (s->pa == NULL)) {
-			s->pa = &e->schan[ac->SubChId];
+			s->pa = &e->schan[ac->SubChId].au;
 			e->num_srvs++;
 		} else
 			if (!(ac->Primary) && (s->sa == NULL)) {
-				s->sa = &e->schan[ac->SubChId];
+				s->sa = &e->schan[ac->SubChId].au;
 				e->num_srvs++;
 			}
 #if DEBUG > 0
@@ -144,9 +166,11 @@ int add_data_service(struct ens_info *e, struct mscpktdat *dt, int sid)
 			perror("add_data_service: malloc failed"); 
 		s->label[0] = '\0';
 		s->sid = sid;
+                s->scid = dt->SCId;
 		s->next = NULL;
 		s->pa = NULL;
 		s->sa = NULL;
+                s->dt = NULL;
 		if ((ptr = e->srv) == NULL) {
 			e->srv = s;
 			s->next = NULL;
@@ -159,39 +183,48 @@ int add_data_service(struct ens_info *e, struct mscpktdat *dt, int sid)
 					break;
 				} else
 					ptr = ptr->next;
-	}
+        }
 
-	if ((dt->Primary && (s->pa == NULL)) || (!(dt->Primary) && (s->sa == NULL))) {
-		if (dt->Primary && (s->pa == NULL)) {
-			s->pa = &e->schan[dt->SCId];
-			e->num_srvs++;
-		} else
-			if (!(dt->Primary) && (s->sa == NULL)) {
-				s->sa = &e->schan[dt->SCId];
-				e->num_srvs++;
-			}
 #if DEBUG > 0
-		fprintf(stderr,"add_data_service: sid=%#08x sc=%d pri=%d\n",sid,dt->SCId,dt->Primary);
+		fprintf(stderr,"add_data_service: sid=%#08x SCId=%d pri=%d\n",sid,dt->SCId,dt->Primary);
 #endif
-	}
 #if DEBUG > 0
-	else
 		fprintf(stderr,"add_data_service: Service %#08x already known\n",sid);
 #endif
 	return 0;
 }
 
 /*
-** Add the subchannel if it isn't already known
+** Add an audio subchannel if it isn't already known
 */
-int add_subchannel(struct ens_info *e, struct subch *s)
+int add_audio_subchannel(struct ens_info *e, struct audio_subch *s)
 {
-	if (e->schan[s->subchid].subchid > 64) {
+	if (e->schan[s->subchid].au.subchid > 64) {
 #if DEBUG > 0
-		fprintf(stderr,"add_subchannel: subchid=%d\n",s->subchid);
+		fprintf(stderr,"add_audio_subchannel: subchid=%d\n",s->subchid);
 #endif
-		memcpy(&e->schan[s->subchid], s, sizeof(struct subch));
+		memcpy(&e->schan[s->subchid], s, sizeof(struct audio_subch));
 	}
+	return 0;
+}
+
+/*
+** Add a data subchannel if it isn't already known
+*/
+int add_data_subchannel(struct ens_info *e, struct data_subch *s)
+{
+	if (e->schan[s->subchid].dt.subchid > 64) {
+#if DEBUG > 0
+		fprintf(stderr,"add_data_subchannel: subchid=%d\n",s->subchid);
+#endif
+		memcpy(&e->schan[s->subchid], s, sizeof(struct data_subch));
+                einf.num_srvs++;
+	}
+#if DEBUG > 0
+        else {
+		fprintf(stderr,"add_data_subchannel: already got subchid=%d\n",s->subchid);
+        }
+#endif
 	return 0;
 }
 
@@ -209,7 +242,7 @@ int labelled(struct ens_info* e)
 
 	while (p != NULL) {
 		if (strlen(p->label) == 0) {
-#if DEBUG > 0
+#if DEBUG > 1
 			fprintf(stderr,"labelled: sid %#04x has no label yet\n",p->sid);
 #endif
 			labelled = 0;
@@ -232,9 +265,8 @@ int disp_ensemble(struct ens_info* e)
 			   "eep-1b","eep-2b","eep-3b","eep-4b"};
 
 	fprintf(stderr,"%s (%#04hx)\n",e->label,e->eid);
-	p = e->srv;
 
-	while (p != NULL) {
+        for (p = e->srv; p != NULL; p = p->next) {
 		fprintf(stderr,"%2d : ",i++);
 		if (strlen(p->label) != 0)
 			fprintf(stderr,"%16s (%#04x) ",p->label,p->sid);
@@ -260,7 +292,9 @@ int disp_ensemble(struct ens_info* e)
 					fprintf(stderr," DAB+");
 			}
 		}
-		p = p->next;
+                if (p->dt != NULL) {
+                        fprintf(stderr, "Data subch=%2d start=%2d CUs=%3d SCId=%d PktAddr=%d", p->dt->subch->subchid, p->dt->subch->startaddr, p->dt->subch->subchsz, p->scid, p->dt->pktaddr);
+                }
 		fprintf(stderr,"\n");
 		fflush(stderr);
 	}
@@ -292,10 +326,18 @@ int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
                                         sel_srv->cur_frame = 0;
                                         sel_srv->cifcnt = 0;
                                         sel_srv->dest = stdout;
-					if ((j == i - 1) && (p->sa != NULL))
-						sel_srv->sch = p->sa;
-					else
-						sel_srv->sch = p->pa;
+					if ((j == i - 1) && (p->sa != NULL)) {
+						sel_srv->au = p->sa;
+                                                sel_srv->dt = NULL;
+                                        }
+                                        else if (p->dt != NULL) {
+                                                sel_srv->au = NULL;
+                                                sel_srv->dt = p->dt;
+                                        }
+					else {
+						sel_srv->au = p->pa;
+                                                sel_srv->dt = NULL;
+                                        }
 				}	
 				if (p->sa == NULL)
 					j += 1;
@@ -305,7 +347,8 @@ int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
 			}
 		} else {
 			rq = 0;
-			sel_srv->sch = NULL;
+			sel_srv->au = NULL;
+			sel_srv->dt = NULL;
 		}
 	}
 	return 0;

@@ -31,7 +31,7 @@
 /* Viterbi symbol values 0->127 1->129 erasure->128 */
 #define OFFSET 128
 
-int uep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct subch *s, int* len)
+int uep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len)
 {
 	int i, j, k, indx;
 	const struct uepprof p = ueptable[s->uep_indx];
@@ -55,7 +55,7 @@ int uep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct subch *s, i
 	return 0;
 }
 
-int eep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct subch *s, int* len)
+int eep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len)
 {
 	int i, j, k, n, indx;
 	struct eepprof p = eeptable[s->protlvl];

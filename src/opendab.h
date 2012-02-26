@@ -93,6 +93,7 @@ struct cbuf {
 };
 
 int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest);
+int wfdata(unsigned char *buf, int len, FILE *dest);
 
 void wf_time(struct timespec *tp);
 
@@ -102,7 +103,8 @@ int wfdabplusdec(unsigned char *sfbuf, unsigned char *ibuf, int ibytes, int bitr
 int prs_assemble(int fd, unsigned char *rdbuf, unsigned char *prsbuf, unsigned char *selstr, int i);
 int msc_assemble(unsigned char *symbuf, struct selsrv *srv);
 int fic_assemble(unsigned char* rdbuf, unsigned char* ficsyms, unsigned char* rawfibs, FILE *ofp);
-int startsym(struct symrange *r, struct subch *s);
+int startsym_audio(struct symrange *r, struct audio_subch *s);
+int startsym_data(struct symrange *r, struct data_subch *s);
 int ficinit(struct ens_info *e);
 int wfsymsel(unsigned char *sel, struct symrange *r);
 int unpickfig(unsigned char* fig, int figlen);
@@ -110,13 +112,15 @@ int unpickfig(unsigned char* fig, int figlen);
 int user_select_service(struct ens_info* e, struct selsrv *sel_srv);
 int disp_ensemble(struct ens_info* e);
 struct service* find_service(struct ens_info *e, int sid);
+struct service* find_service_by_scid(struct ens_info *e, int scid);
 int add_audio_service(struct ens_info *e, struct mscstau *ac, int sid);
 int add_data_service(struct ens_info *e, struct mscpktdat *dt, int sid);
-int add_subchannel(struct ens_info *e, struct subch *s);
+int add_audio_subchannel(struct ens_info *e, struct audio_subch *s);
+int add_data_subchannel(struct ens_info *e, struct data_subch *s);
 int labelled(struct ens_info *e);
 
-int uep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct subch *s, int* len);
-int eep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct subch *s, int* len);
+int uep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len);
+int eep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len);
 
 int crc16check(unsigned char* buf, int len);
 int crccheck(unsigned char* buf, int len);

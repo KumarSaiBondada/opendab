@@ -108,13 +108,19 @@ int main(int argc, char **argv)
 	rewind(ifp);
 	disp_ensemble(&einf);
 	user_select_service(&einf, &sel_srv);
-        startsym(&sel_srv.sr, sel_srv.sch);
+        
+        if (sel_srv.au != NULL && (sel_srv.au->subchid < 64))
+                startsym_audio(&sel_srv.sr, sel_srv.au);
+        
+        if (sel_srv.dt != NULL && (sel_srv.dt->subch->subchid < 64))
+                startsym_data(&sel_srv.sr, sel_srv.dt->subch);
+
         sel_srv.cbuf = init_cbuf(&sel_srv.sr);
         
 	while (!feof(ifp)) {
 		cnt = fread(pktbuf, 524, 1, ifp);
 		if ((f++ > FSKIP) && (cnt == 1) && (*pktbuf == 0x0c) && (*(pktbuf+1) == 0x62)) {
-                        if ((sel_srv.sch != NULL) && (*(pktbuf+2) > 4)) {
+                        if (*(pktbuf+2) > 4) {
                                 msc_assemble(pktbuf, &sel_srv);
                         }
                 }

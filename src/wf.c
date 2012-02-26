@@ -148,7 +148,8 @@ int main (int argc, char **argv)
 	}
 
 	if (!gen_dump) {
-		sel_srv.sch = (struct subch *)NULL;
+		sel_srv.au = (struct audio_subch *)NULL;
+		sel_srv.dt = (struct data_subch_packet *)NULL;
 		ficinit(&einf);
 	}
 
@@ -189,12 +190,20 @@ int main (int argc, char **argv)
 							disp_ensemble(&einf);
 							enslistvisible = 1;
 						}
-						if (sel_srv.sch == NULL) {
+						if (sel_srv.au == NULL && sel_srv.dt == NULL) {
                                                         user_select_service(&einf, &sel_srv);
                                                 }
 						else {
-							if (!selected && (sel_srv.sch->subchid < 64)) {
-								startsym(&sel_srv.sr, sel_srv.sch);
+							if (!selected && sel_srv.au != NULL && (sel_srv.au->subchid < 64)) {
+								startsym_audio(&sel_srv.sr, sel_srv.au);
+								wfsymsel(selstr, &sel_srv.sr);
+                                                                sel_srv.cbuf = init_cbuf(&sel_srv.sr);
+								selected = 1;
+								synccnt = 6;
+								fprintf(stderr,"Type ctrl-c to quit\n");
+							}
+							if (!selected && sel_srv.dt != NULL && (sel_srv.dt->subch->subchid < 64)) {
+								startsym_data(&sel_srv.sr, sel_srv.dt->subch);
 								wfsymsel(selstr, &sel_srv.sr);
                                                                 sel_srv.cbuf = init_cbuf(&sel_srv.sr);
 								selected = 1;

@@ -46,7 +46,7 @@
 #define BITSPERSYM BYTESPERSYM * 8
 
 /* sub-channel data */
-struct subch {
+struct audio_subch {
 	int subchid;
 	int startaddr;
 	int subchsz;
@@ -55,6 +55,17 @@ struct subch {
 	int protlvl;
 	int uep_indx;
 	int dabplus; /* 1 if DAB+, 0 otherwise */
+};
+
+struct data_subch_packet {
+        int pktaddr;
+        struct data_subch *subch;
+};
+
+struct data_subch {
+	int subchid;
+        int startaddr;
+	int subchsz;
 };
 
 /* Used for sub-channel symbol extraction -
@@ -76,8 +87,10 @@ struct symrange {
 struct service {
 	char label[17];
 	int sid;
-	struct subch* pa; /* Primary audio */
-	struct subch* sa; /* Secondary audio */
+        int scid;
+	struct audio_subch *pa; /* Primary audio */
+	struct audio_subch *sa; /* Secondary audio */
+        struct data_subch_packet *dt;  /* Packet data */
 	struct service *next;
 	struct service *prev; 
 };
@@ -91,12 +104,16 @@ struct ens_info {
 	/* Pointer to list of services */
 	struct service *srv;
 	/* Array of subchannel info */
-	struct subch schan[64];
+        union {
+                struct audio_subch au;
+                struct data_subch dt;
+        } schan[64];
 };
 
 struct selsrv {
 	int sid;
-	struct subch *sch;
+	struct audio_subch *au;
+	struct data_subch_packet *dt;
 	struct symrange sr; 
         struct cbuf *cbuf;
 	unsigned int cur_frame;

@@ -133,6 +133,11 @@ int time_disinterleave(struct cbuf *cbuf, unsigned char *obuf, int subchsz, stru
 	return 0;
 }
 
+int wfdata(unsigned char *buf, int len, FILE *dest) {
+        fwrite(buf, len, 1, dest);
+        return 0;
+}
+
 /*
 ** Finish decoding the frames from the circular buffer.
 */
@@ -148,25 +153,32 @@ int msc_decode(struct selsrv *srv)
 	unsigned int metric;
 	int bits, len, obytes;
 
-        struct subch *s = srv->sch;
+        struct audio_subch *au = srv->au;
+        struct data_subch_packet *dt = srv->dt;
         struct symrange *sr = &srv->sr;
+
+        int subchsz;
+        if (au != NULL)
+                subchsz = au->subchsz;
+        if (dt != NULL)
+                subchsz = 1;
 
 	if (init) {
 		init = 0;
-		if ((lf = malloc(s->subchsz * BITSPERCU * sizeof(unsigned char))) == NULL) {
+		if ((lf = malloc(subchsz * BITSPERCU * sizeof(unsigned char))) == NULL) {
 			perror("msc_decode lf");
 			exit(EXIT_FAILURE);
 		}
-		if ((dpbuf = malloc(4 * s->subchsz * BITSPERCU * sizeof(unsigned char))) == NULL) {
+		if ((dpbuf = malloc(4 * subchsz * BITSPERCU * sizeof(unsigned char))) == NULL) {
 			perror("msc_decode dpbuf");
 			exit(EXIT_FAILURE);
 		}
-		if ((obuf = malloc(4 * s->subchsz * BITSPERCU * sizeof(unsigned char))) == NULL) {
+		if ((obuf = malloc(4 * subchsz * BITSPERCU * sizeof(unsigned char))) == NULL) {
 			perror("msc_decode obuf");
 			exit(EXIT_FAILURE);
 		}
-		if (s->dabplus) {
-			if ((sfbuf = malloc(5 * 4 * s->subchsz * BITSPERCU * sizeof(unsigned char))) == NULL) {
+		if (au != NULL && au->dabplus) {
+			if ((sfbuf = malloc(5 * 4 * subchsz * BITSPERCU * sizeof(unsigned char))) == NULL) {
 				perror("msc_decode sfbuf");
 				exit(EXIT_FAILURE);
 			}
@@ -175,25 +187,33 @@ int msc_decode(struct selsrv *srv)
 		
 	}
 		
-	time_disinterleave(srv->cbuf, lf, s->subchsz, sr);
-	if (s->eepprot)
-		eep_depuncture(dpbuf, lf, s, &len);
-	else
-		uep_depuncture(dpbuf, lf, s, &len);
+	time_disinterleave(srv->cbuf, lf, subchsz, sr);
+
+        if (au != NULL) {
+                if (au->eepprot)
+                        eep_depuncture(dpbuf, lf, au, &len);
+                else
+                        uep_depuncture(dpbuf, lf, au, &len);
+        }
 	
 	/* BDB's wfic functions: */
 	bits = len/N - (K - 1);
 	k_viterbi(&metric, obuf, dpbuf, bits, mettab, 0, 0);
 	scramble(NULL, obuf, dpbuf, bits);
 	bit_to_byte(NULL, 1, dpbuf, bits, obuf, &obytes);
-	if (s->dabplus)
+	if (au != NULL && au->dabplus) {
 #ifdef DABPLUS
 		wfdabplusdec(sfbuf, obuf, obytes, s->bitrate, srv->dest);
 #else
 	        fprintf(stderr,"Built without DAB+ support - enable in Makefile and rebuild\n");
 #endif
-	else
-                wfmp2(obuf, obytes, s->bitrate, srv->dest);
+        }
+        else if (au != NULL) {
+                wfmp2(obuf, obytes, au->bitrate, srv->dest);
+        }
+        else {
+                wfdata(obuf, obytes, srv->dest);
+        }
 
 	return 0;
 }

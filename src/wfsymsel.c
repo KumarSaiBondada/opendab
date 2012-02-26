@@ -35,7 +35,7 @@
 ** CIFs. Also calculate subchannel start
 ** address offset from start of 1st symbol.
 */
-int startsym(struct symrange *r, struct subch *s)
+int startsym_audio(struct symrange *r, struct audio_subch *s)
 {
 	int i;
 
@@ -48,7 +48,28 @@ int startsym(struct symrange *r, struct subch *s)
 	}
 	r->startcu = s->startaddr % CUSPERSYM;
 	r->numsyms = r->end[0] - r->start[0] + 1;
-	/*fprintf(stderr,"start[0]=%d end[0]=%d start[1]=%d end[1]=%d start[2]=%d end[2]=%d start[3]=%d end[3]=%d\n",r->start[0],r->end[0],r->start[1],r->end[1],r->start[2],r->end[2],r->start[3],r->end[3]);*/
+	/*fprintf(stderr,"subch: %d start[0]=%d end[0]=%d start[1]=%d end[1]=%d start[2]=%d end[2]=%d start[3]=%d end[3]=%d\n",s->subchid, r->start[0],r->end[0],r->start[1],r->end[1],r->start[2],r->end[2],r->start[3],r->end[3]);*/
+	return 0;
+}
+
+/* Convert packet address to start and end symbol numbers...
+*/
+int startsym_data(struct symrange *r, struct data_subch *s)
+{
+	int i;
+
+	r->start[0] = s->startaddr/CUSPERSYM + MSCSTART;
+	r->end[0] = (s->startaddr + s->subchsz)/CUSPERSYM + MSCSTART;
+	r->endcu = (s->startaddr + s->subchsz) % CUSPERSYM;
+	for (i=0; i < 3; i++) {
+		r->start[i + 1] = r->start[i] + SYMSPERCIF;
+		r->end[i + 1] = r->end[i] + SYMSPERCIF;
+	}
+	r->startcu = s->startaddr % CUSPERSYM;
+	r->numsyms = r->end[0] - r->start[0] + 1;
+
+	/* fprintf(stderr,"start[0]=%d end[0]=%d start[1]=%d end[1]=%d start[2]=%d end[2]=%d start[3]=%d end[3]=%d\n",r->start[0],r->end[0],r->start[1],r->end[1],r->start[2],r->end[2],r->start[3],r->end[3]); */
+
 	return 0;
 }
 

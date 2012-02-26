@@ -190,7 +190,8 @@ int fig_0_1(int figlen, int pd, int oe, int cn, unsigned char* fig)
 		struct subchorg_s sf;
 	} sl;
 
-	struct subch s;
+	struct audio_subch au;
+	struct data_subch dt;
 	int f, i, j;
 
 	i = einf.num_schans;
@@ -198,38 +199,41 @@ int fig_0_1(int figlen, int pd, int oe, int cn, unsigned char* fig)
 	while (j > 0) {
 		f = ipack(fig);
 		memcpy(&sl.lf, &f, sizeof(int));
-		s.subchid = sl.lf.SubChId;
-		s.startaddr = sl.lf.StartAddr;
-		s.eepprot = sl.lf.LongForm;
 #if DEBUG > 0
 		fprintf(stderr, "fig_0_1: lf=%d subchid = %d startaddr = %d ",
-			sl.lf.LongForm,s.subchid,s.startaddr);
+			sl.lf.LongForm,sl.lf.SubChId,sl.lf.StartAddr);
 #endif
 		if (sl.lf.LongForm) {
 			/* EEP */
-			s.subchsz = sl.lf.SubChSz;
-			s.protlvl = sl.lf.Opt * 4 + sl.lf.ProtLvl;
-			s.bitrate = s.subchsz/eeptable[s.protlvl].sizemul * eeptable[s.protlvl].ratemul;
+                        dt.subchid = sl.lf.SubChId;
+                        dt.startaddr = sl.lf.StartAddr;
+			dt.subchsz = sl.lf.SubChSz;
 #if DEBUG > 0
-			fprintf(stderr, "subchsz = %d protlvl = %d bitrate = %d\n",
-				s.subchsz,s.protlvl,s.bitrate);
+			fprintf(stderr, "subchsz = %d\n", dt.subchsz);
 #endif
 			fig += 4;
 			j -= 4;
+                        
+                        add_data_subchannel(&einf, &dt);
 		} else {
 			/* UEP */
-			s.subchsz = ueptable[sl.sf.TabIndx].subchsz;
-			s.protlvl = ueptable[sl.sf.TabIndx].protlvl;
-			s.bitrate = ueptable[sl.sf.TabIndx].bitrate;
-			s.uep_indx = sl.sf.TabIndx;
+                        au.subchid = sl.lf.SubChId;
+                        au.startaddr = sl.lf.StartAddr;
+                        au.eepprot = sl.lf.LongForm;
+			au.subchsz = ueptable[sl.sf.TabIndx].subchsz;
+			au.protlvl = ueptable[sl.sf.TabIndx].protlvl;
+			au.bitrate = ueptable[sl.sf.TabIndx].bitrate;
+			au.uep_indx = sl.sf.TabIndx;
 #if DEBUG > 0
 			fprintf(stderr, "TabIndx = %d subchsz = %d protlvl = %d bitrate = %d\n",
-				sl.sf.TabIndx,s.subchsz,s.protlvl,s.bitrate);
+				sl.sf.TabIndx,au.subchsz,au.protlvl,au.bitrate);
 #endif
 			fig += 3;
 			j -= 3;
+                        
+                        /* hack - BBC National DAB uses sf = audio, lf = data */
+                        add_audio_subchannel(&einf,&au);
 		}
-		add_subchannel(&einf,&s);
 		i++;
 	}
 	return 0;
@@ -347,6 +351,9 @@ int fig_0_3(int figlen, int pd, int oe, int cn, unsigned char* fig)
 	struct servcomp2 sc2;
 	int f;
 
+	struct data_subch_packet *pkt;
+        struct service *s;
+
 #if DEBUGd > 2
 	fprintf(stderr, "fig_0_3: "); 
 	for (f=0; f < figlen; f++)
@@ -364,6 +371,17 @@ int fig_0_3(int figlen, int pd, int oe, int cn, unsigned char* fig)
 #if DEBUGd > 0
 	fprintf(stderr, "fig_0_3: SCId=%d,Rfa=%d,SCCAFlg=%d,DGFlag=%d,Rfu=%d,DSCTy=%d,SubChId=%d,PktAddr=%d,SCCA=%d\n",sc2.SCId,sc2.Rfa,sc2.SCCAFlg,sc2.DGFlag,sc2.Rfu,sc2.DSCTy,sc1.SubChId,sc1.PktAddr,sc1.SCCA);
 #endif
+
+	if ((s = find_service_by_scid(&einf, sc2.SCId)) != NULL) {
+                if (s->dt == NULL) {
+                        if ((pkt = (struct data_subch_packet *)malloc(sizeof(struct data_subch_packet))) == NULL)
+                                perror("fig_0_3: malloc failed");
+                        s->dt = pkt;
+                }
+                s->dt->pktaddr = sc1.PktAddr;
+                if (einf.schan[sc1.SubChId].dt.subchid < 64)
+                        s->dt->subch = &einf.schan[sc1.SubChId].dt;
+        }
 
 	return 0;
 }
