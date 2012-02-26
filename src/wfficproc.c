@@ -175,20 +175,24 @@ int add_data_service(struct ens_info *e, struct mscpktdat *dt, int sid)
 			e->srv = s;
 			s->next = NULL;
 			s->prev = NULL;
+                        e->num_srvs++;
 		} else
 			while (ptr != NULL)
 				if (ptr->next == NULL) {
 					ptr->next = s;
 					s->prev = ptr;
+                                        e->num_srvs++;
 					break;
 				} else
 					ptr = ptr->next;
-        }
+
 
 #if DEBUG > 0
 		fprintf(stderr,"add_data_service: sid=%#08x SCId=%d pri=%d\n",sid,dt->SCId,dt->Primary);
 #endif
+        }
 #if DEBUG > 0
+        else
 		fprintf(stderr,"add_data_service: Service %#08x already known\n",sid);
 #endif
 	return 0;
@@ -218,7 +222,6 @@ int add_data_subchannel(struct ens_info *e, struct data_subch *s)
 		fprintf(stderr,"add_data_subchannel: subchid=%d\n",s->subchid);
 #endif
 		memcpy(&e->schan[s->subchid], s, sizeof(struct data_subch));
-                einf.num_srvs++;
 	}
 #if DEBUG > 0
         else {
