@@ -23,11 +23,6 @@
 */
 #include "opendab.h"
 
-#ifdef __MACH__
-#include <mach/clock.h>
-#include <mach/mach.h>
-#endif
-
 int wf_afc(int fd, double afcv)
 {
 	static double offset = 3.25e-1;
@@ -38,19 +33,7 @@ int wf_afc(int fd, double afcv)
 	short afc_val;
 	struct timespec tp;
 
-#ifdef __MACH__ // OS X does not have clock_gettime, use clock_get_time
-clock_serv_t cclock;
-mach_timespec_t mts;
-host_get_clock_service(mach_host_self(), CALENDAR_CLOCK, &cclock);
-clock_get_time(cclock, &mts);
-mach_port_deallocate(mach_task_self(), cclock);
-tp.tv_sec = mts.tv_sec;
-tp.tv_nsec = mts.tv_nsec;
-
-#else
-clock_gettime(CLOCK_REALTIME, &tp);
-#endif
-
+        wf_time(&tp);
 	tp.tv_sec = tp.tv_sec % 1000000;
 	cmsec = tp.tv_sec * 1000 + tp.tv_nsec/1000000;
 	dt = cmsec - lmsec;

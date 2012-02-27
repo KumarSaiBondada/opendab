@@ -37,7 +37,7 @@ endif
 
 
 COMMON_OBJS=	wfbyteops.o wfcrc.o wfdebug.o wfficproc.o wffigproc.o wffirecrc.o wfmdepunc.o \
-		wfmsc.o wfsymsel.o wftables.o wfmp2.o wfdabplus.o
+		wfmsc.o wfsymsel.o wftables.o wfmp2.o wfdabplus.o wftime.o
 
 WF_OBJS=	wf.o wfafc.o wfclose.o wfcmd.o wfimp.o wfinit.o wfleds.o wfmaths.o \
 		wfpk.o wfprsread.o wfravg.o wfread.o wfref.o wfscale.o wfsleep.o \

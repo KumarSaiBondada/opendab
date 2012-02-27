@@ -75,6 +75,8 @@ struct usb_ctrlrequest {
 
 int wfmp2(unsigned char *buf, int len, int bitrate);
 
+void wf_time(struct timespec *tp);
+
 int wfinitrs();
 int wfdabplusdec(unsigned char *sfbuf, unsigned char *ibuf, int ibytes, int bitrate);
 
