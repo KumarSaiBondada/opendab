@@ -52,9 +52,9 @@ endif
 
 
 COMMON_OBJS=	wfbyteops.o wfcrc.o wfdebug.o wfficproc.o wffigproc.o wffirecrc.o wfmdepunc.o \
-		wfmsc.o wfsymsel.o wftables.o wfmp2.o wfdabplus.o wftime.o wfmaths.o wfcmd.o
+		wfmsc.o wfsymsel.o wftables.o wfmp2.o wfdabplus.o wftime.o wfmaths.o
 
-WF_OBJS=	wf.o wfafc.o wfclose.o wfimp.o wfinit.o wfleds.o \
+WF_OBJS=	wf.o wfafc.o wfclose.o wfimp.o wfinit.o wfleds.o wfcmd.o \
 		wfpk.o wfprsread.o wfravg.o wfread.o wfref.o wfscale.o wfsleep.o \
 		wfsync.o wftiming.o wftune.o wfusb.o
 

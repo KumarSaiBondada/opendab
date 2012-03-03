@@ -33,6 +33,12 @@ static unsigned char pktbuf[524];
 static unsigned char fsyms[384 * 3];
 static unsigned char rfibs[360];
 
+/* no-op */
+int wfgetnum(int max)
+{
+        return 0;
+}
+
 /* Skip this many symbols at the start of the file - likely to be bad */
 #define FSKIP 800
 

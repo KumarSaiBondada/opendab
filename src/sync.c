@@ -32,36 +32,10 @@ int fdw;
 unsigned char *fsyms, *rfibs, *rdbuf;
 FILE *of = NULL, *ffp = NULL;
 
-/*
-** Close files, shut down WaveFinder and exit
-*/
-void wfexit(int signum)
+/* no-op */
+int wfgetnum(int max)
 {
-	if (of != NULL)
-		fclose(of);
-	if (ffp != NULL)
-		fclose(ffp);
-
-	wf_close(fdw);
-	fprintf(stderr,"Done.\n");
-	exit(EXIT_SUCCESS);
-}
-
-/*
-** Catch SIGINT (ctrl-c) to exit cleanly
-*/ 
-int wfcatch(int fd)
-{
-	struct sigaction a;
-
-	fdw = fd;
-	a.sa_handler = wfexit;
-	sigemptyset(&(a.sa_mask));
-	a.sa_flags = 0;
-  
-	sigaction(SIGINT, &a, NULL);
-
-	return 0;
+        return 0;
 }
 
 int main(int argc, char **argv)

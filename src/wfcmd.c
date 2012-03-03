@@ -25,16 +25,72 @@
 */
 #include "opendab.h"
 
+extern FILE *of, *ffp;
+static int fdw;
+
 int wfgetnum(int max)
 {
-	int i;
+	fd_set rfds;
+	struct timeval tv;
+	int retval;
+	int v, c;
+        char lbuf[80];
 
-	scanf("%d",&i);
+	FD_ZERO(&rfds);
+	FD_SET(0, &rfds);
 
-	while ((i < 0) || (i > (max))) {
-		fprintf(stderr,"Please select a service (0 to %d): ", max);
-		scanf("%d",&i);
+	tv.tv_sec = 0;
+	tv.tv_usec = 0;
+
+	retval = select(1, &rfds, NULL, NULL, &tv);
+
+	if (retval == -1) {
+		fprintf(stderr,"select err\n");
+		perror("select()");
 	}
-	return i;
+	else if (retval) {
+		c = read(STDIN_FILENO, lbuf, 80 * sizeof(unsigned char));
+		if (sscanf(lbuf,"%d",&v) != 1)
+			v = -1;
+                if ((v < 0) || (v > max))
+                        v = -1;
+                        
+	} else {
+		v = -1;
+        }
+
+	return (v);
+}
+
+/*
+** Close files, shut down WaveFinder and exit
+*/
+void wfexit(int signum)
+{
+	if (of != NULL)
+		fclose(of);
+	if (ffp != NULL)
+		fclose(ffp);
+
+	wf_close(fdw);
+	fprintf(stderr,"Done.\n");
+	exit(EXIT_SUCCESS);
+}
+
+/*
+** Catch SIGINT (ctrl-c) to exit cleanly
+*/ 
+int wfcatch(int fd)
+{
+	struct sigaction a;
+
+	fdw = fd;
+	a.sa_handler = wfexit;
+	sigemptyset(&(a.sa_mask));
+	a.sa_flags = 0;
+  
+	sigaction(SIGINT, &a, NULL);
+
+	return 0;
 }
 

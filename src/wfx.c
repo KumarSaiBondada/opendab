@@ -36,6 +36,19 @@ static unsigned char rfibs[360];
 /* Skip this many symbols at the start of the file - likely to be bad */
 #define FSKIP 800
 
+int wfgetnum(int max)
+{
+	int i;
+
+	scanf("%d",&i);
+
+	while ((i < 0) || (i > (max))) {
+		fprintf(stderr,"Please select a service (0 to %d): ", max);
+		scanf("%d",&i);
+	}
+	return i;
+}
+
 int main(int argc, char **argv)
 {
 	FILE *ifp, *ofp = NULL;
