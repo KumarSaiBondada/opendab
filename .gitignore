@@ -6,6 +6,7 @@ src/prsgen.dSYM
 src/wf
 src/wfx
 src/wfxall
+src/sync
 
 *~
 .#*
