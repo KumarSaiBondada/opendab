@@ -113,6 +113,7 @@ int add_audio_service(struct ens_info *e, struct mscstau *ac, int sid)
 		s->next = NULL;
 		s->pa = NULL;
 		s->sa = NULL;
+                s->dt = NULL;
 		if ((ptr = e->srv) == NULL) {
 			e->srv = s;
 			s->next = NULL;
