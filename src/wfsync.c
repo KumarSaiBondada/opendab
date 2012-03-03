@@ -28,42 +28,88 @@
 
 extern fftw_complex *prs1, *prs2;
 
-static fftw_complex *idata, *rdata, *mdata, *prslocal, *iprslocal;
+static fftw_complex *idata, *rdata, *mdata, *prslocal, *iprslocal, *cdata;
 static double *magdata;
 
 /* Select all symbols by default */
 static unsigned char selstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
 /* Use this before changing the symbol selection */
 static unsigned char chgstr[] = {0x00, 0xf0, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
 
-fftw_complex *cdata;
-
-int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
+static void wf_sync_cvmsg(int fd, double c)
 {
-	long ems, dt;
-	int indxv = 0, indx, indx_n = 0, lcnt;
-	double t,u,v, vi, vs, max, maxv, stf, ir, c, vmean;
-	short w1, w2;
-	unsigned short cv;
-	int pts = 0x800;
+        unsigned short cv;
+        int i = c * -8192000.0;
+
+        if (i != 0) {
+
+                i = i + 0x7f;
+                if (i > 0) {
+                        cv = i;
+                        if (cv > 0xff)
+                                cv = 0xff;
+                }
+                else {
+                        cv = 0;
+                }
+
+                cv = 0x1000 | cv;
+                wf_mem_write(fd, OUTREG0, cv);
+        }
+}
+
+static void wf_sync_imsg(int fd, unsigned char *symstr,  double ir)
+{
 	unsigned char imsg[] = {0x7f, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff,
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00};
 
-	fftw_complex tc;
+	short w1 = ((int)(ir * 81.66400146484375)) & 0xffff;
+	short w2 = ((int)(ir * 1.024)) & 0xffff;
 
-	prs_scale(sync->prsbuf, idata);
-	ifft_prs(idata, rdata, pts);
+	memcpy(imsg + 2, symstr, 10 * sizeof(unsigned char));
+	imsg[24] = w1 & 0xff;
+	imsg[25] = (w1 >> 8) & 0xff;
+	imsg[26] = w2 & 0xff;  
+	imsg[27] = (w2 >> 8) & 0xff;
 
-	/* The real part of the ifft has reverse order (apart from
-	   the DC term) using fftw compared with the Intel SPL functions
+	wf_timing_msg(fd, imsg);
+}
+
+static void vec_reverse_real(fftw_complex *vec, int pts)
+{
+	/* The real part of the ifft has reverse order (apart from the
+	   DC term) using fftw compared with the Intel SPL functions
 	   used in the w!nd*ws software. */
+        
 	for (int i = 1; i < pts/2; i++) {
-		t = creal(*(rdata+i));
-		*(rdata+i) = *(rdata+i) - t + creal(*(rdata+pts-i));
-		*(rdata+pts-i) = *(rdata+pts-i) - creal(*(rdata+pts-i)) + t;
+		double t = creal(*(vec+i));
+		*(vec+i) = *(vec+i) - t + creal(*(vec+pts-i));
+		*(vec+pts-i) = *(vec+pts-i) - creal(*(vec+pts-i)) + t;
 	}
+}
+
+static void vec_reverse(fftw_complex *vec, int pts)
+{
+	/* The real part of the fft has reverse order using fftw
+	   compared with the Intel SPL functions used in the w!nd*ws
+	   software */
+
+        for (int i = 1; i < pts/2; i++) {
+                fftw_complex tc = *(vec+i);
+                *(vec+i) = *(vec+pts-i);
+                *(vec+pts-i) = tc;
+        }
+}
+
+double calc_c(struct sync_state *sync, fftw_complex *rdata, int pts)
+{
+        int lcnt, indx;
+        int indx_n = 0, indxv = 0;
+	double maxv = 0;
+	double c = 4.8828125e-7;
 
 	if (sync->locked) {
 		wfref(0x0, 0x800, prslocal, prs1);
@@ -74,24 +120,16 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 	}
 	/* Copy 0x18 complex points from start of data and append to the end */
 	for (int i = 0; i < 0x18; i++)
-		*(prslocal + 0x800 + i) = *(prslocal + i);
-
-	maxv = 0;
+		*(prslocal + pts + i) = *(prslocal + i);
 
 	for (int j = 0; j < lcnt; j++) {
 		mpy3(rdata, prslocal + j, cdata, pts);
 		fft_prs(cdata, mdata, pts);
-
-		/* The real part of the fft has reverse order using fftw compared
-		   with the Intel SPL functions used in the w!nd*ws software */
-		for (int i = 1; i < pts/2; i++) {
-			tc = *(mdata+i);
-			*(mdata+i) = *(mdata+pts-i);
-			*(mdata+pts-i) = tc;
-		}
+                vec_reverse(mdata, pts);
 		mag(mdata, magdata, pts);
-		max = maxext(magdata, pts, &indx);
-		vmean = mean(magdata, pts);
+
+		double max = maxext(magdata, pts, &indx);
+		double vmean = mean(magdata, pts);
 
 		if ((vmean * 12) > max)
 			max = 0;
@@ -120,28 +158,23 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 	else
 		indxv = 0x800 - indxv;
 
-	c = 4.8828125e-7;
-
 	if (sync->locked)
 		c = c * indx_n;
 	else
 		c = c * indxv;
 
-	wfref(-indxv, 0x800, iprslocal, prs2);
-	mpy(idata, iprslocal, mdata, pts);
-	fft_prs(mdata, rdata, pts);
+	wfref(-indxv, pts, iprslocal, prs2);
 
-	/* The real part of the fft has reverse order using fftw compared
-	   with the Intel SPL functions used in the w!nd*ws software */
-	for (int i = 1; i < pts/2; i++) {
-		tc = *(rdata+i);
-		*(rdata+i) = *(rdata+pts-i);
-		*(rdata+pts-i) = tc;
-	}
+        return c;
+}
 
-	mag(rdata, magdata, pts);
-	max = maxext(magdata, pts, &indx);
-	vmean = mean(magdata, pts);
+double calc_ir(struct sync_state *sync, double *magdata, int pts)
+{
+        int indx;
+        double ir, v, stf;
+
+	double max = maxext(magdata, pts, &indx);
+	double vmean = mean(magdata, pts);
 
 	if ((14.0 * vmean) > max)
 		max = 0.0;
@@ -157,20 +190,41 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 		stf = stf/2;
 		v = ir - stf;
     
-		vi = wfimp(v, mdata);
+		double vi = wfimp(v, mdata);
 		if (vi > max) {
 			max = vi;
 			ir = v;
 		}
 		v = ir + stf;
-		vs = wfimp(v, mdata);
+		double vs = wfimp(v, mdata);
 		if (vs > max) {
 			max = vs;
 			ir = v;
 		}
 	} while ((1000*stf) > 2.5e-2); 
 
-	ir = ir * 1000.0;
+	ir *= 1000.0;
+
+        return ir;
+}
+
+int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
+{
+	int pts = 0x800;
+
+	prs_scale(sync->prsbuf, idata);
+	ifft_prs(idata, rdata, pts);
+        vec_reverse_real(rdata, pts);
+
+        /* this also sets up iprslocal */
+        double c = calc_c(sync, rdata, pts);
+
+	mpy(idata, iprslocal, mdata, pts);
+	fft_prs(mdata, rdata, pts);
+        vec_reverse(rdata, pts);
+	mag(rdata, magdata, pts);
+
+        double ir = calc_ir(sync, magdata, pts);
 
 	if ((fabs(c) < (2.4609375e-4/2)) && (fabs(ir) < 350)) {
 		if (sync->lock_count == 0) {
@@ -186,26 +240,11 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 
         fprintf(stderr, "c: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, sync->locked, sync->lock_count, sync->count);
 
-	int i = c * -8192000.0;
-
-	/* Allow at least 60ms between these messages */
-	ems = wf_time();
-	dt = ems - sync->last_cv_msg;
+	/* Must be at least 60ms between these messages */
+	long ems = wf_time();
+	long dt = ems - sync->last_cv_msg;
 	if (dt > 60L) {
-		if (i != 0) {
-			i = i + 0x7f;
-			if (i > 0) {
-				cv = i;
-				if (cv > 0xff)
-					cv = 0xff;
-			}
-                        else {
-                                cv = 0;
-                        }
-
-			cv = 0x1000 | cv;
-			wf_mem_write(fd, OUTREG0, cv);
-		}
+                wf_sync_cvmsg(fd, c);
                 sync->last_cv_msg = ems;
 	}
 
@@ -217,19 +256,9 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
                 wf_afc(fd, &sync->afc_offset, ir);
                 sync->last_afc_msg = ems;
         }
-	
-	t = ir * 81.66400146484375;
-	w1 = (int)t & 0xffff;
-	u = ir * 1.024;
-	w2 = (int)u & 0xffff;
 
-	memcpy(imsg + 2, symstr, 10 * sizeof(unsigned char));
-	imsg[24] = w1 & 0xff;
-	imsg[25] = (w1 >> 8) & 0xff;
-	imsg[26] = w2 & 0xff;  
-	imsg[27] = (w2 >> 8) & 0xff;
-
-	wf_timing_msg(fd, imsg);
+        /* Send this message every time */
+        wf_sync_imsg(fd, symstr, ir);
 
 	return 0;
 }
