@@ -101,8 +101,6 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 
 		if ((vmean * 12) > max)
 			max = 0;
-                else
-                        fprintf(stderr, "accept\n");
 
 		if (sync->locked) {
 			indx_n = wfpk(magdata, indx);
@@ -134,8 +132,6 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 		c = c * indx_n;
 	else
 		c = c * indxv;
-
-        fprintf(stderr, "c: %0.10f\n", c);
 
 	wfref(-indxv, 0x800, iprslocal, prs2);
 	mpy(idata, iprslocal, mdata, pts);
@@ -194,7 +190,7 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 		sync->locked = 0;
 	}
 
-        fprintf(stderr, "sync_locked: %d lckcnt: %d\n", sync->locked, lckcnt);
+        fprintf(stderr, "c: %0.10f sync_locked: %d lckcnt: %d\n", c, sync->locked, lckcnt);
 
 	i = c * -8192000.0;
 
@@ -213,13 +209,13 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 			} else cv = 0;
 
 			cv = 0x1000 | cv;
-			//wf_mem_write(fd, OUTREG0, cv);
+			wf_mem_write(fd, OUTREG0, cv);
 		}
 	}
 	lms = ems;
 
 	ir = raverage(ir);
-	//wf_afc(fd, ir);
+	wf_afc(fd, ir);
 	
 	t = ir * 81.66400146484375;
 	w1 = (int)t & 0xffff;
@@ -232,7 +228,7 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 	imsg[25] = (w1 >> 8) & 0xff;
 	imsg[26] = w2 & 0xff;  
 	imsg[27] = (w2 >> 8) & 0xff;
-	//wf_timing_msg(fd, imsg);
+	wf_timing_msg(fd, imsg);
 
 	return 0;
 }
@@ -259,8 +255,6 @@ int prs_assemble(int fd, unsigned char *rdbuf, struct sync_state *sync)
         }
 
 	blk = *(rdbuf+7); /* Block number: 0-3 */
-
-        fprintf(stderr,"blk = %d, seen_flags = %d\n", blk, sync->seen_flags); 
 
 	if (blk == 0x00) {
 		sync->seen_flags = 1;

@@ -46,7 +46,6 @@ int wfpk(double *magdata, int indx)
 	if (res > 0x400)
 		res = res - 0x800;
 
-	fprintf(stderr, "wfpk: res=%d\n",res);
 	return (res);
 }
 

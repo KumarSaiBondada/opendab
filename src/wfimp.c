@@ -34,8 +34,6 @@ double wfimp(double irtime, fftw_complex *mdata)
 	ir = irtime * 4096.0;
 	jr = (int)ir & 0x7fffff;
 
-        fprintf(stderr, "wfimp irtime: %0.10f jr: %d\n", irtime, jr);
-
 	m = a;
 
 	for (i=0; i < 0x800; i++) {
