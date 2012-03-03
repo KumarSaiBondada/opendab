@@ -26,8 +26,6 @@
 */
 #include "opendab.h"
 
-extern fftw_complex *prs1, *prs2;
-
 static fftw_complex *idata, *rdata, *mdata, *prslocal, *iprslocal, *cdata;
 static double *magdata;
 
@@ -78,46 +76,23 @@ static void wf_sync_imsg(int fd, unsigned char *symstr,  double ir)
 	wf_timing_msg(fd, imsg);
 }
 
-static void vec_reverse_real(fftw_complex *vec, int pts)
-{
-	/* The real part of the ifft has reverse order (apart from the
-	   DC term) using fftw compared with the Intel SPL functions
-	   used in the w!nd*ws software. */
-        
-	for (int i = 1; i < pts/2; i++) {
-		double t = creal(*(vec+i));
-		*(vec+i) = *(vec+i) - t + creal(*(vec+pts-i));
-		*(vec+pts-i) = *(vec+pts-i) - creal(*(vec+pts-i)) + t;
-	}
-}
-
-static void vec_reverse(fftw_complex *vec, int pts)
-{
-	/* The real part of the fft has reverse order using fftw
-	   compared with the Intel SPL functions used in the w!nd*ws
-	   software */
-
-        for (int i = 1; i < pts/2; i++) {
-                fftw_complex tc = *(vec+i);
-                *(vec+i) = *(vec+pts-i);
-                *(vec+pts-i) = tc;
-        }
-}
-
-double calc_c(struct sync_state *sync, fftw_complex *rdata, int pts)
+static double calc_c(struct sync_state *sync, fftw_complex *idata, int pts)
 {
         int lcnt, indx;
         int indx_n = 0, indxv = 0;
 	double maxv = 0;
 	double c = 4.8828125e-7;
 
+	ifft_prs(idata, rdata, pts);
+
 	if (sync->locked) {
-		wfref(0x0, 0x800, prslocal, prs1);
+		wfref(0x0, 0x800, prslocal, sync->refs->prs1);
 		lcnt = 1;
 	} else {
-		wfref(0x0c, 0x800, prslocal, prs1);
+		wfref(0x0c, 0x800, prslocal, sync->refs->prs1);
 		lcnt = 25;
 	}
+
 	/* Copy 0x18 complex points from start of data and append to the end */
 	for (int i = 0; i < 0x18; i++)
 		*(prslocal + pts + i) = *(prslocal + i);
@@ -125,7 +100,6 @@ double calc_c(struct sync_state *sync, fftw_complex *rdata, int pts)
 	for (int j = 0; j < lcnt; j++) {
 		mpy3(rdata, prslocal + j, cdata, pts);
 		fft_prs(cdata, mdata, pts);
-                vec_reverse(mdata, pts);
 		mag(mdata, magdata, pts);
 
 		double max = maxext(magdata, pts, &indx);
@@ -163,15 +137,19 @@ double calc_c(struct sync_state *sync, fftw_complex *rdata, int pts)
 	else
 		c = c * indxv;
 
-	wfref(-indxv, pts, iprslocal, prs2);
+	wfref(-indxv, pts, iprslocal, sync->refs->prs2);
 
         return c;
 }
 
-double calc_ir(struct sync_state *sync, double *magdata, int pts)
+static double calc_ir(struct sync_state *sync, fftw_complex *idata, int pts)
 {
         int indx;
         double ir, v, stf;
+
+	mpy(idata, iprslocal, mdata, pts);
+	fft_prs(mdata, rdata, pts);
+	mag(rdata, magdata, pts);
 
 	double max = maxext(magdata, pts, &indx);
 	double vmean = mean(magdata, pts);
@@ -190,13 +168,13 @@ double calc_ir(struct sync_state *sync, double *magdata, int pts)
 		stf = stf/2;
 		v = ir - stf;
     
-		double vi = wfimp(v, mdata);
+		double vi = wfimp(sync, v, mdata);
 		if (vi > max) {
 			max = vi;
 			ir = v;
 		}
 		v = ir + stf;
-		double vs = wfimp(v, mdata);
+		double vs = wfimp(sync, v, mdata);
 		if (vs > max) {
 			max = vs;
 			ir = v;
@@ -213,18 +191,11 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 	int pts = 0x800;
 
 	prs_scale(sync->prsbuf, idata);
-	ifft_prs(idata, rdata, pts);
-        vec_reverse_real(rdata, pts);
 
         /* this also sets up iprslocal */
-        double c = calc_c(sync, rdata, pts);
+        double c = calc_c(sync, idata, pts);
 
-	mpy(idata, iprslocal, mdata, pts);
-	fft_prs(mdata, rdata, pts);
-        vec_reverse(rdata, pts);
-	mag(rdata, magdata, pts);
-
-        double ir = calc_ir(sync, magdata, pts);
+        double ir = calc_ir(sync, idata, pts);
 
 	if ((fabs(c) < (2.4609375e-4/2)) && (fabs(ir) < 350)) {
 		if (sync->lock_count == 0) {
@@ -238,7 +209,7 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 		sync->locked = 0;
 	}
 
-        fprintf(stderr, "c: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, sync->locked, sync->lock_count, sync->count);
+        fprintf(stderr, "c: %0.10f ir: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, ir, sync->locked, sync->lock_count, sync->count);
 
 	/* Must be at least 60ms between these messages */
 	long ems = wf_time();
@@ -374,6 +345,10 @@ struct sync_state *wfsyncinit(void)
         sync->ravg->j = 0;
         sync->ravg->k = 0;
         
-	wfrefinit();
-	return sync;
+	if (wfrefinit(sync) == NULL) {
+		fprintf(stderr,"wfsync: wfrefinit failed");
+                return(NULL);
+	}
+        
+        return sync;
 }

@@ -102,6 +102,13 @@ struct sync_state {
         unsigned char seen_flags;
         unsigned char *prsbuf;
         struct raverage *ravg;
+        struct sync_refs *refs;
+};
+
+struct sync_refs {
+        fftw_complex *prs1;
+        fftw_complex *prs2;
+        int *cos_table;
 };
 
 struct raverage {
@@ -158,7 +165,7 @@ int mpy(fftw_complex *srca, fftw_complex *srcb, fftw_complex *dst, int n);
 int mag(fftw_complex *in, double *out, int n);
 double mean(double *in, int n);
 double maxext(double *in, int n, int *index);
-double wfimp(double irtime, fftw_complex *mdata);
+double wfimp(struct sync_state *sync, double irtime, fftw_complex *mdata);
 double raverage(struct raverage *r, double ir);
 int wfpk(double *magdata, int indx);
 
@@ -167,7 +174,7 @@ void cpx_dump(char *fname, fftw_complex *vect, int pts);
 void dbl_dump(char *fname, double *vect, int pts);
 void char_dump(char* fname, unsigned char* vect, int pts);
 
-int wfrefinit();
+void *wfrefinit(struct sync_state *sync);
 int wfref(int indx, int pts, fftw_complex* outp, fftw_complex* inp);
 
 void wf_sleep(int usec);

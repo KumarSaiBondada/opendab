@@ -20,10 +20,7 @@
 */
 #include "opendab.h"
 
-/* cos table generated in wfrefinit() */
-extern int *cos_table;
-
-double wfimp(double irtime, fftw_complex *mdata)
+double wfimp(struct sync_state *sync, double irtime, fftw_complex *mdata)
 {
 	double ir, re_prs, im_prs, ri, rj;
 	int jr;
@@ -46,8 +43,8 @@ double wfimp(double irtime, fftw_complex *mdata)
 		/* Too slow! */
 		/* cosa = (1 << 15)*cos((double)a * 2*M_PI/2048.0L); */
 		/* cosd = (1 << 15)*cos((double)d * 2*M_PI/2048.0L); */
-		cosa = *(cos_table + a);
-		cosd = *(cos_table + d);
+		cosa = *(sync->refs->cos_table + a);
+		cosd = *(sync->refs->cos_table + d);
 		re_prs = creal(*(mdata + i));
 		im_prs = cimag(*(mdata + i));  
 		p = im_prs * cosd;

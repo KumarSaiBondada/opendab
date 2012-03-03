@@ -22,9 +22,6 @@
 #define _XOPEN_SOURCE 1 /* M_PI */
 #include "opendab.h"
 
-int *cos_table;
-fftw_complex *prs1, *prs2;
-
 int wfref(int indx, int pts, fftw_complex* outp, fftw_complex* inp)
 {
 	if (indx == 0) {
@@ -47,17 +44,19 @@ int wfref(int indx, int pts, fftw_complex* outp, fftw_complex* inp)
 /*
 ** Load PRS data, build cosine table
 */
-int wfrefinit(void)
+void *wfrefinit(struct sync_state *sync)
 {
-	int i;
+        if ((sync->refs = malloc(sizeof(struct sync_refs))) == NULL) {
+                return(NULL);
+        }
 
-	prs1 = prs_cread("prs1.gplot",0x1000);
-	prs2 = prs_cread("prs2.gplot",0x1000);
+	sync->refs->prs1 = prs_cread("prs1.gplot",0x1000);
+	sync->refs->prs2 = prs_cread("prs2.gplot",0x1000);
 
-	cos_table = (int*)malloc(0x800 * sizeof(int));
+	sync->refs->cos_table = (int*)malloc(0x800 * sizeof(int));
 
-	for (i=0; i < 0x800; i++) 
-		*(cos_table + i) = 32767 * cos(i * 2 * M_PI/2048);
+	for (int i = 0; i < 0x800; i++) 
+		*(sync->refs->cos_table + i) = 32767 * cos(i * 2 * M_PI/2048);
 
-	return 0;
+	return sync;
 }

@@ -21,12 +21,39 @@
 
 #include "opendab.h"
 
+static void vec_reverse_real(fftw_complex *vec, int pts)
+{
+	/* The real part of the ifft has reverse order (apart from the
+	   DC term) using fftw compared with the Intel SPL functions
+	   used in the w!nd*ws software. */
+        
+	for (int i = 1; i < pts/2; i++) {
+		double t = creal(*(vec+i));
+		*(vec+i) = *(vec+i) - t + creal(*(vec+pts-i));
+		*(vec+pts-i) = *(vec+pts-i) - creal(*(vec+pts-i)) + t;
+	}
+}
+
+static void vec_reverse(fftw_complex *vec, int pts)
+{
+	/* The real part of the fft has reverse order using fftw
+	   compared with the Intel SPL functions used in the w!nd*ws
+	   software */
+
+        for (int i = 1; i < pts/2; i++) {
+                fftw_complex tc = *(vec+i);
+                *(vec+i) = *(vec+pts-i);
+                *(vec+pts-i) = tc;
+        }
+}
+
 int fft_prs(fftw_complex *in, fftw_complex *out, int n)
 {
 	static fftw_plan fp;
 
 	fp = fftw_plan_dft_1d(n, in, out, FFTW_FORWARD, FFTW_ESTIMATE);
 	fftw_execute(fp);
+        vec_reverse(out, n);
 	return 0;
 }
 
@@ -36,6 +63,7 @@ int ifft_prs(fftw_complex *in, fftw_complex *out, int n)
 
 	bp = fftw_plan_dft_1d(n, in, out, FFTW_BACKWARD, FFTW_ESTIMATE);
 	fftw_execute(bp);
+        vec_reverse_real(out, n);
 	return 0;
 }
 
