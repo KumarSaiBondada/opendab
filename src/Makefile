@@ -22,11 +22,26 @@
 # Comment out the next line if you don't want support for DAB+.
 #DABPLUS=1
 
+UNAME=$(shell uname)
+
 CC=gcc
-CFLAGS= -g -Wall -O3 -I /opt/local/include
-LIBS=-lwfic -lfftw3 -lm
+CFLAGS= -g -Wall -O3
+LIBS=-lfftw3 -lm -lwfic
 WFIC=./wfic
-LIBPATH=-L $(WFIC) -L /opt/local/lib
+LIBPATH=-L $(WFIC)
+
+# MacPorts libfftw on OS X
+
+ifeq ($(UNAME), Darwin)
+CFLAGS += -I /opt/local/include
+LIBPATH += -L /opt/local/lib
+endif
+
+# librt for clock_gettime on Linux
+
+ifeq ($(UNAME), Linux)
+LIBS += -lrt
+endif
 
 ifdef DABPLUS
 CFLAGS += -DDABPLUS
@@ -37,9 +52,9 @@ endif
 
 
 COMMON_OBJS=	wfbyteops.o wfcrc.o wfdebug.o wfficproc.o wffigproc.o wffirecrc.o wfmdepunc.o \
-		wfmsc.o wfsymsel.o wftables.o wfmp2.o wfdabplus.o wftime.o
+		wfmsc.o wfsymsel.o wftables.o wfmp2.o wfdabplus.o wftime.o wfmaths.o
 
-WF_OBJS=	wf.o wfafc.o wfclose.o wfcmd.o wfimp.o wfinit.o wfleds.o wfmaths.o \
+WF_OBJS=	wf.o wfafc.o wfclose.o wfcmd.o wfimp.o wfinit.o wfleds.o \
 		wfpk.o wfprsread.o wfravg.o wfread.o wfref.o wfscale.o wfsleep.o \
 		wfsync.o wftiming.o wftune.o wfusb.o
 

@@ -4,6 +4,8 @@
  * May be used under the terms of the GNU Public License
  */
 
+#define _XOPEN_SOURCE 1
+
 /* Select code here */
 #define	K 7			/* Constraint length */
 #define N 4			/* Number of symbols per data bit */

@@ -22,6 +22,8 @@
 ** WaveFinder symbol selection
 */
 
+#define _XOPEN_SOURCE 1 /* swab() */
+
 #include <unistd.h>
 #include <stdio.h>
 #include <string.h>

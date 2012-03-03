@@ -18,6 +18,8 @@
     You should have received a copy of the GNU General Public License
     along with OpenDAB.  If not, see <http://www.gnu.org/licenses/>.
 */
+
+#define _XOPEN_SOURCE 1 /* M_PI */
 #include "opendab.h"
 
 int *cos_table;

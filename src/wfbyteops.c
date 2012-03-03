@@ -22,7 +22,10 @@
 ** Byte manipulation functions
 */
 
+#define _XOPEN_SOURCE 1 /* swab() */
+
 #include <unistd.h>
+#include "opendab.h"
 
 /* 
 ** Pack 4 bytes into an int in usable order
