@@ -95,6 +95,8 @@ struct cbuf {
 struct sync_state {
         int count;
         int locked;
+        int lock_count;
+        long lms;
         unsigned char seen_flags;
         unsigned char *prsbuf;
 };

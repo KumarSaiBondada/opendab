@@ -41,9 +41,6 @@ fftw_complex *cdata;
 
 int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 {
-	static int cnt = 0;
-	static int lckcnt = 3;
-	static long lms = 0L;
 	long ems, dt;
 	int i, j, indxv = 0, indx, indx_n = 0, lcnt;
 	double t,u,v, vi, vs, max, maxv, stf, ir, c;
@@ -179,25 +176,25 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 	ir = ir * 1000.0;
 
 	if ((fabs(c) < (2.4609375e-4/2)) && (fabs(ir) < 350)) {
-		if (lckcnt == 0) {
+		if (sync->lock_count == 0) {
 			sync->locked = 1;
 		} else {
-			lckcnt--;
+			sync->lock_count--;
 			sync->locked = 0;
 		}
 	} else {
-		lckcnt = 3;
+		sync->lock_count = 3;
 		sync->locked = 0;
 	}
 
-        fprintf(stderr, "c: %0.10f sync_locked: %d lckcnt: %d\n", c, sync->locked, lckcnt);
+        fprintf(stderr, "c: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, sync->locked, sync->lock_count, sync->count);
 
 	i = c * -8192000.0;
 
         wf_time(&tp);
 	tp.tv_sec = tp.tv_sec % 1000000;
 	ems = tp.tv_sec * 1000 + tp.tv_nsec/1000000;
-	dt = ems - lms;
+	dt = ems - sync->lms;
 	/* Allow at least 60ms between these messages */
 	if (dt > 60L) {
 		if (i != 0) {
@@ -212,7 +209,7 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 			wf_mem_write(fd, OUTREG0, cv);
 		}
 	}
-	lms = ems;
+	sync->lms = ems;
 
 	ir = raverage(ir);
 	wf_afc(fd, ir);
@@ -223,7 +220,6 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 	w2 = (int)u & 0xffff;
 
 	memcpy(imsg + 2, symstr, 10 * sizeof(unsigned char));
-	cnt++;
 	imsg[24] = w1 & 0xff;
 	imsg[25] = (w1 >> 8) & 0xff;
 	imsg[26] = w2 & 0xff;  
@@ -325,6 +321,7 @@ struct sync_state *wfsyncinit(void)
 
         sync->count = 0;
         sync->locked = 0;
+        sync->lock_count = 3;
         sync->seen_flags = 0;
 
 	wfrefinit();
