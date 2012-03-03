@@ -23,33 +23,23 @@
 */
 #include "opendab.h"
 
-int wf_afc(int fd, double afcv)
+int wf_afc(int fd, double *offset, double afcv)
 {
-	static double offset = 3.25e-1;
-	static long lmsec = 0;
 	double a;
 	int i;
-	long cmsec, dt;
 	short afc_val;
-	struct timespec tp;
 
-        wf_time(&tp);
-	tp.tv_sec = tp.tv_sec % 1000000;
-	cmsec = tp.tv_sec * 1000 + tp.tv_nsec/1000000;
-	dt = cmsec - lmsec;
-
-	/* Must be at least 250ms between AFC messages */
-	if ((dt > 250L) && ((afcv > 75) || (afcv < -75))) {
+	if ((afcv > 75) || (afcv < -75)) {
 		if ((afcv > 350) || (afcv < -350)) {
 			a = afcv * -2.2e-5;
-			a = a + offset;
-			offset = a;
+			a = a + *offset;
+			*offset = a;
 		} else {
 			a = 1.0/4096.0;
 			if (afcv > 0.0)
 				a = -a;
-			a = offset + a;
-			offset = a;
+			a = *offset + a;
+			*offset = a;
 		}
 
 		i = (int)(a * 65535);
@@ -58,17 +48,9 @@ int wf_afc(int fd, double afcv)
 			i = 0xffff;
 		
 		afc_val = i & 0xfffc;
-		
 		wf_mem_write(fd, DACVALUE, afc_val);
-		/* fprintf(stderr,"afcv=%e offset=%e AFC: %04hx\n",afcv,offset,afc_val);  */
-	} /* else
-		fprintf(stderr,"cmsec = %ld lmsec = %ld dt = %ld afcv=%e: no AFC message\n",cmsec,lmsec,dt,afcv);
-
-	if (dt < 250L)
-		fprintf(stderr,"Skipped AFC - interval\n"); */
-
-	lmsec = cmsec;
-
-	return 0;
+	}
+        
+        return 0;
 }
 

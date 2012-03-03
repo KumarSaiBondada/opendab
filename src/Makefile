@@ -25,7 +25,7 @@
 UNAME=$(shell uname)
 
 CC=gcc
-CFLAGS= -g -Wall -O3
+CFLAGS= -g -Wall -Werror -O3 -std=c99
 LIBS=-lfftw3 -lm 
 WFIC=./wfic
 LIBPATH=-L $(WFIC)

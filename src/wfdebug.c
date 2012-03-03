@@ -24,12 +24,6 @@
 
 #include "opendab.h"
 
-void stream_dump(fftw_complex *vect, int pts)
-{
-	int j;
-
-}
-
 /* Dump vector of fttw_complex to file suitable for gnuplot */
 
 void cplx_dump(char* fname, fftw_complex* vect, int pts)

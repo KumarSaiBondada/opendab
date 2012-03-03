@@ -250,9 +250,7 @@ int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 {
 	unsigned char sym, frame;
 	unsigned char fbuf[BITSPERSYM];
-	int j, symspercif, buffer_full = 0;
-
-	symspercif = srv->sr.end[0] - srv->sr.start[0];
+	int j, buffer_full = 0;
 
 	sym = *(symbuf+2);
 	frame = *(symbuf+3);

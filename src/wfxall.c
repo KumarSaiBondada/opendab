@@ -22,6 +22,9 @@
 ** Extract audio data from a stream of raw symbol data 
 ** from a file generated using the "-d" option of wf.
 */
+
+#define _GNU_SOURCE 1 /* asprintf */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -107,7 +110,10 @@ int main(int argc, char **argv)
         i = 0;
         for (p = einf.srv; p != NULL; p = p->next) {
                 if (p->pa != NULL) {
-                        (void) asprintf(&fname, "service_%x.mp2", p->sid);
+                        if ((asprintf(&fname, "service_%x.mp2", p->sid)) < 0) {
+                                perror("asprintf");
+                                exit(EXIT_FAILURE);
+                        }
                         sel_srv[i].dest = fopen(fname, "w");
                         free(fname);
 

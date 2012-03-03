@@ -46,7 +46,7 @@ int main(int argc, char **argv)
 	const char usage1[] = "Usage: wfx [-f] [-o outfile] [infile]";
 	const char usage2[] = "infile defaults to \"raw.strm\", outfile to \"out.mp2\" -f generates FIC file fic.dat";
 	int nargs;
-	int fd, k;
+	int fd = 0, k;
         int l = 0;
         struct sync_state *sync;
 

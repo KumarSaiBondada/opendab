@@ -96,9 +96,19 @@ struct sync_state {
         int count;
         int locked;
         int lock_count;
-        long lms;
+        long last_cv_msg;
+        long last_afc_msg;
+        double afc_offset;
         unsigned char seen_flags;
         unsigned char *prsbuf;
+        struct raverage *ravg;
+};
+
+struct raverage {
+        int j;
+        int k;
+        double prev_ir;
+        double sa[8];
 };
 
 int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest);
@@ -149,7 +159,7 @@ int mag(fftw_complex *in, double *out, int n);
 double mean(double *in, int n);
 double maxext(double *in, int n, int *index);
 double wfimp(double irtime, fftw_complex *mdata);
-double raverage(double ir);
+double raverage(struct raverage *r, double ir);
 int wfpk(double *magdata, int indx);
 
 void cplx_dump(char *fname, fftw_complex *vect, int pts);
@@ -169,7 +179,7 @@ int wfgetnum(int max);
 int wf_close(int fd);
 int wf_timing(int fd, int msgnum);
 int wf_read(int fd, unsigned char *rdbuf, int *len);
-int wf_afc(int fd, double afcv);
+int wf_afc(int fd, double *offset, double afcv);
 int wf_mem_write(int fd, unsigned short addr, unsigned short val);
 int wf_sendmem(int fd, int value, int index, unsigned char *bytes, int size);
 int wf_r1_msg(int fd, unsigned char *bytes);

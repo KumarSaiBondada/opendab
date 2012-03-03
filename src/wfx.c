@@ -40,11 +40,15 @@ int wfgetnum(int max)
 {
 	int i;
 
-	scanf("%d",&i);
+	if ((scanf("%d",&i)) < 1) {
+		exit(EXIT_FAILURE);
+        }
 
 	while ((i < 0) || (i > (max))) {
 		fprintf(stderr,"Please select a service (0 to %d): ", max);
-		scanf("%d",&i);
+                if ((scanf("%d",&i)) < 1) {
+                        exit(EXIT_FAILURE);
+                }
 	}
 	return i;
 }

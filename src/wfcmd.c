@@ -45,11 +45,14 @@ int wfgetnum(int max)
 	retval = select(1, &rfds, NULL, NULL, &tv);
 
 	if (retval == -1) {
-		fprintf(stderr,"select err\n");
 		perror("select()");
+                return(-1);
 	}
 	else if (retval) {
-		c = read(STDIN_FILENO, lbuf, 80 * sizeof(unsigned char));
+		if ((c = read(STDIN_FILENO, lbuf, 80 * sizeof(unsigned char))) < 0) {
+                        perror("read()");
+                        return(-1);
+                }
 		if (sscanf(lbuf,"%d",&v) != 1)
 			v = -1;
                 if ((v < 0) || (v > max))

@@ -146,10 +146,7 @@ int fig_5(int figlen, unsigned char *fig)
 */
 int fig_0_0(int figlen, int pd, int oe, int cn, unsigned char* fig)
 {
-	unsigned int OccChg;  /* : 8; Value doesn't fit into bitfield */
-	short f;
 	struct ensinf ei;
-	unsigned short EId;
 
 #if DEBUG > 2
 	{ int i;
@@ -159,24 +156,14 @@ int fig_0_0(int figlen, int pd, int oe, int cn, unsigned char* fig)
 		fprintf(stderr, "\n");
 	}
 #endif
-	EId = spack(fig);
-	f = spack(fig + 2);
-	memcpy(&ei, &f, sizeof(struct ensinf));
+	memcpy(&ei, fig, sizeof(struct ensinf));
 
 #if DEBUG > 0
 	fprintf(stderr, "fig_0_0: EId=%#04x ChgFlg=%d AlrmFlg=%d CIFCntH=%d CIFCntL=%d",
-		EId, ei.ChgFlg, ei.AlrmFlg, ei.CIFCntH, ei.CIFCntL);
-#endif
-	if (ei.ChgFlg > 0) {
-		OccChg = *(fig + 4);
-#if DEBUG > 0
-		fprintf(stderr, " OccChg=%d",OccChg);
-#endif
-	}
-#if DEBUG > 0
+		ei.EId, ei.ChgFlg, ei.AlrmFlg, ei.CIFCntH, ei.CIFCntL);
+        fprintf(stderr, " OccChg=%d",OccChg);
 	fprintf(stderr, "\n");
 #endif
-	einf.eid = EId;
 	return 0;
 }
 
@@ -412,18 +399,18 @@ int fig_0_10(int figlen, int pd, int oe, int cn, unsigned char* fig)
 		m--;
 	wd = ((dt.MJD + 2) % 7) + 1;
 	y += 1900;
-#if DEBUG > 0
+#if DEBUG >= 0
 	fprintf(stderr, "fig_0_10: Rfu=%d MJD=%d(y=%d m=%d d=%d wd=%d) LSI=%d ConfInd=%d UTCFlg=%d UTCHour=%d UTCMin=%d",
 		dt.Rfu,dt.MJD,y,m,d,wd,dt.LSI,dt.ConfInd,dt.UTCFlg,dt.UTCHour,dt.UTCMin);
 #endif
 	if (dt.UTCFlg) {
 		g = spack(fig+2);
 		memcpy(&ut, &g, sizeof(struct utcl));
-#if DEBUG > 0
+#if DEBUG >= 0
 		fprintf(stderr, " UTCSec=%d UTCmsec=%d",ut.UTCSec,ut.UTCmsec);
 #endif
 	}
-#if DEBUG > 0
+#if DEBUG >= 0
 	fprintf(stderr, "\n");
 #endif
 	return 0;

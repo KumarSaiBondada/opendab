@@ -28,7 +28,6 @@
 
 extern fftw_complex *prs1, *prs2;
 
-static double vmean;
 static fftw_complex *idata, *rdata, *mdata, *prslocal, *iprslocal;
 static double *magdata;
 
@@ -43,7 +42,7 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 {
 	long ems, dt;
 	int i, j, indxv = 0, indx, indx_n = 0, lcnt;
-	double t,u,v, vi, vs, max, maxv, stf, ir, c;
+	double t,u,v, vi, vs, max, maxv, stf, ir, c, vmean;
 	short w1, w2;
 	unsigned short cv;
 	int pts = 0x800;
@@ -194,8 +193,9 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
         wf_time(&tp);
 	tp.tv_sec = tp.tv_sec % 1000000;
 	ems = tp.tv_sec * 1000 + tp.tv_nsec/1000000;
-	dt = ems - sync->lms;
+
 	/* Allow at least 60ms between these messages */
+	dt = ems - sync->last_cv_msg;
 	if (dt > 60L) {
 		if (i != 0) {
 			i = i + 0x7f;
@@ -208,11 +208,17 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 			cv = 0x1000 | cv;
 			wf_mem_write(fd, OUTREG0, cv);
 		}
+                sync->last_cv_msg = ems;
 	}
-	sync->lms = ems;
 
-	ir = raverage(ir);
-	wf_afc(fd, ir);
+	ir = raverage(sync->ravg, ir);
+
+	/* Must be at least 250ms between AFC messages */
+	dt = ems - sync->last_afc_msg;
+        if (dt > 250L) {
+                wf_afc(fd, &sync->afc_offset, ir);
+                sync->last_afc_msg = ems;
+        }
 	
 	t = ir * 81.66400146484375;
 	w1 = (int)t & 0xffff;
@@ -224,6 +230,7 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 	imsg[25] = (w1 >> 8) & 0xff;
 	imsg[26] = w2 & 0xff;  
 	imsg[27] = (w2 >> 8) & 0xff;
+
 	wf_timing_msg(fd, imsg);
 
 	return 0;
@@ -270,6 +277,7 @@ int prs_assemble(int fd, unsigned char *rdbuf, struct sync_state *sync)
 
 struct sync_state *wfsyncinit(void)
 {
+        int i;
         struct sync_state *sync;
         
 	/* alloc storage for impulse response calculations */
@@ -319,11 +327,26 @@ struct sync_state *wfsyncinit(void)
                 return(NULL);
 	}
 
+	if ((sync->ravg = malloc(sizeof(struct raverage))) == NULL) {
+		fprintf(stderr,"wfsync: malloc failed for ravg");
+                return(NULL);
+	}
+
         sync->count = 0;
         sync->locked = 0;
         sync->lock_count = 3;
         sync->seen_flags = 0;
-
+        sync->last_cv_msg = 0;
+        sync->last_afc_msg = 0;
+	sync->afc_offset = 3.25e-1;
+        
+        for (i = 0; i < 8; i++) {
+                sync->ravg->sa[i] = 0.0;
+        }
+        sync->ravg->prev_ir = 0.0;
+        sync->ravg->j = 0;
+        sync->ravg->k = 0;
+        
 	wfrefinit();
 	return sync;
 }

@@ -144,10 +144,12 @@ struct fig_1 {
 
 /* Used by fig_0_0() */
 struct ensinf {
+	unsigned OccChg  : 8;
 	unsigned CIFCntL : 8;
 	unsigned CIFCntH : 5;
 	unsigned AlrmFlg : 1;
 	unsigned ChgFlg  : 2;
+        unsigned EId     : 16;
 };
 
 /* Used by fig_0_1() Long Form */
