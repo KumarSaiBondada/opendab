@@ -26,11 +26,46 @@
 #define MAXFIBS 700
 
 extern struct ens_info einf;
-extern int sync_locked;
 extern int fibcnt;
 
+/* Select all symbols by default */
+static unsigned char selstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
+int fdw;
 unsigned char *fsyms, *rfibs, *rdbuf;
 FILE *of = NULL, *ffp = NULL;
+
+/*
+** Close files, shut down WaveFinder and exit
+*/
+void wfexit(int signum)
+{
+	if (of != NULL)
+		fclose(of);
+	if (ffp != NULL)
+		fclose(ffp);
+
+	wf_close(fdw);
+	fprintf(stderr,"Done.\n");
+	exit(EXIT_SUCCESS);
+}
+
+/*
+** Catch SIGINT (ctrl-c) to exit cleanly
+*/ 
+int wfcatch(int fd)
+{
+	struct sigaction a;
+
+	fdw = fd;
+	a.sa_handler = wfexit;
+	sigemptyset(&(a.sa_mask));
+	a.sa_flags = 0;
+  
+	sigaction(SIGINT, &a, NULL);
+
+	return 0;
+}
 
 int main (int argc, char **argv)
 {
@@ -38,16 +73,12 @@ int main (int argc, char **argv)
         char outfile[80] = "";
 	char devname[80] = "/dev/wavefinder0";
 	char ficfile[80] = "fic.dat";
-	unsigned char *prsbuf, *symstr;
-	/* Select all symbols by default */
-	unsigned char selstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-	/* Use this before changing the symbol selection */
- 	unsigned char chgstr[] = {0x00, 0xf0, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
         const char usage[] = " is part of OpenDAB. Distributed under the GPL V.3\nUsage: wf [-f] [-d outfile] [-w devname][freq]\n-d dumps ensemble to outfile caution - huge!\n-w uses Wavefinder devname\n-f generates FIC file 'fic.dat' (ignored if '-d' specified)\nfreq defaults to 225.648MHz (BBC National DAB)";	
 	int fd, k, nargs, sym;
         int l = 0, gen_fic = 0, gen_dump = 0;
 	int slock = 0, enslistvisible = 0;
-	int synccnt = 0, selected = 0;
+	int selected = 0;
+        struct sync_state *sync;
 
 	/* double freq = 218.640;*/ /* DRg */
 	/* double freq = 222.064;*/ /* Digital 1 */
@@ -120,16 +151,14 @@ int main (int argc, char **argv)
 
 	
 	/* Initialize synchronization system - PRS data, storage etc */
-	wfsyncinit(fd);
+	if ((sync = wfsyncinit()) == NULL) {
+                perror("wfsyncinit failed");
+                wf_close(fd);
+        }
 
 	/* Initialize read buffer storage */
 	if ((rdbuf = calloc(PIPESIZE, sizeof(unsigned char))) == NULL) {
 		fprintf(stderr,"main: calloc failed for rdbuf");
-		wf_close(fd);
-	}
-
-	if ((prsbuf = calloc(0x800, sizeof(unsigned char))) == NULL) {
-		fprintf(stderr,"main: calloc failed for prsbuf");
 		wf_close(fd);
 	}
 
@@ -158,21 +187,13 @@ int main (int argc, char **argv)
 	wf_init(fd, freq);
 	fprintf(stderr,"complete.\n");
 
-	symstr = selstr;
-
 	fprintf(stderr,"Sync ");
 	for (;;) {
 		wf_read(fd, rdbuf, &l);
 		for (k=0; k < l; k+=524) {
-			if (*(rdbuf+9+k) == 0x02) {
-				if (synccnt > 0) {
-					symstr = chgstr;
-					synccnt--;
-				} else
-					symstr = selstr;	
-				prs_assemble(fd, rdbuf, prsbuf, symstr, k); /* Sync */
-			}
-			if (sync_locked && !slock) {
+                        prs_assemble(fd, (rdbuf + k), sync);
+
+			if (sync->locked && !slock) {
 				slock = 1;
 				fprintf(stderr,"locked.\n");
 			}
@@ -180,7 +201,7 @@ int main (int argc, char **argv)
 				fwrite(rdbuf+k, sizeof(unsigned char), 524, of);
 			else
 				/* Wait for sync to lock or things might get slowed down too much */
-				if (sync_locked) {
+				if (sync->locked) {
 					if ((fibcnt < MAXFIBS) && !labelled(&einf)) {
 						sym = *(rdbuf+2+k);
 						if ((sym == 2)||(sym == 3)||(sym == 4))
@@ -199,7 +220,7 @@ int main (int argc, char **argv)
 								wfsymsel(selstr, &sel_srv.sr);
                                                                 sel_srv.cbuf = init_cbuf(&sel_srv.sr);
 								selected = 1;
-								synccnt = 6;
+								sync->count = 6; // sync
 								fprintf(stderr,"Type ctrl-c to quit\n");
 							}
 							if (!selected && sel_srv.dt != NULL && (sel_srv.dt->subch->subchid < 64)) {
@@ -207,10 +228,10 @@ int main (int argc, char **argv)
 								wfsymsel(selstr, &sel_srv.sr);
                                                                 sel_srv.cbuf = init_cbuf(&sel_srv.sr);
 								selected = 1;
-								synccnt = 6;
+								sync->count = 6;
 								fprintf(stderr,"Type ctrl-c to quit\n");
 							}
-							if ((synccnt == 0) && (*(rdbuf+2+k) > 4))
+							if ((sync->count == 0) && (*(rdbuf+2+k) > 4))
                                                                 msc_assemble(rdbuf+k, &sel_srv);
 						}
 					}

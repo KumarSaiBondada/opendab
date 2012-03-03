@@ -178,8 +178,10 @@ int msc_decode(struct selsrv *srv)
         int subchsz;
         if (au != NULL)
                 subchsz = au->subchsz;
-        if (dt != NULL)
+        else if (dt != NULL)
                 subchsz = dt->subch->subchsz;
+        else
+                return 0;
 
 	if (init) {
 		init = 0;

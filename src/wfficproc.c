@@ -39,11 +39,8 @@
 */
 #define DEBUG 0
 
-int wfgetnum(char *);
 struct ens_info einf;
-
 int fibcnt = 0;
-static char lbuf[80];
 
 int ficinit(struct ens_info *e)
 {
@@ -319,7 +316,7 @@ int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
 		rq = 1;
 	}
 
-	i = wfgetnum(lbuf);
+	i = wfgetnum(e->num_srvs-1);
 
 	if (i != -1) {
 		if ((i < e->num_srvs) && (i >= 0)) {

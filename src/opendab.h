@@ -92,6 +92,13 @@ struct cbuf {
         int head;
 };
 
+struct sync_state {
+        int count;
+        int locked;
+        unsigned char seen_flags;
+        unsigned char *prsbuf;
+};
+
 int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest);
 int wfdata(unsigned char *buf, int len, FILE *dest);
 
@@ -100,7 +107,9 @@ void wf_time(struct timespec *tp);
 int wfinitrs();
 int wfdabplusdec(unsigned char *sfbuf, unsigned char *ibuf, int ibytes, int bitrate, FILE *dest);
 
-int prs_assemble(int fd, unsigned char *rdbuf, unsigned char *prsbuf, unsigned char *selstr, int i);
+struct sync_state *wfsyncinit();
+int prs_assemble(int fd, unsigned char *rdbuf, struct sync_state *sync);
+
 int msc_assemble(unsigned char *symbuf, struct selsrv *srv);
 int fic_assemble(unsigned char* rdbuf, unsigned char* ficsyms, unsigned char* rawfibs, FILE *ofp);
 int startsym_audio(struct symrange *r, struct audio_subch *s);
@@ -149,13 +158,12 @@ void char_dump(char* fname, unsigned char* vect, int pts);
 int wfrefinit();
 int wfref(int indx, int pts, fftw_complex* outp, fftw_complex* inp);
 
-int wfsyncinit(int fd);
-
 void wf_sleep(int usec);
 
 int wf_init(int fd, double freq);
 void wf_tune(int fd, double freq);
 int wfcatch(int fd);
+int wfgetnum(int max);
 int wf_close(int fd);
 int wf_timing(int fd, int msgnum);
 int wf_read(int fd, unsigned char *rdbuf, int *len);

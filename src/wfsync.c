@@ -32,10 +32,14 @@ static double vmean;
 static fftw_complex *idata, *rdata, *mdata, *prslocal, *iprslocal;
 static double *magdata;
 
-fftw_complex *cdata;
-int sync_locked = 0;
+/* Select all symbols by default */
+static unsigned char selstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+/* Use this before changing the symbol selection */
+static unsigned char chgstr[] = {0x00, 0xf0, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
 
-int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
+fftw_complex *cdata;
+
+int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 {
 	static int cnt = 0;
 	static int lckcnt = 3;
@@ -52,9 +56,10 @@ int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
 				0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x0f, 0x00};
 
 	fftw_complex tc;
+
 	struct timespec tp;
 
-	prs_scale(prsb, idata);
+	prs_scale(sync->prsbuf, idata);
 	ifft_prs(idata, rdata, pts);
 
 	/* The real part of the ifft has reverse order (apart from
@@ -66,7 +71,7 @@ int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
 		*(rdata+pts-i) = *(rdata+pts-i) - creal(*(rdata+pts-i)) + t;
 	}
 
-	if (sync_locked) {
+	if (sync->locked) {
 		wfref(0x0, 0x800, prslocal, prs1);
 		lcnt = 1;
 	} else {
@@ -82,6 +87,7 @@ int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
 	for (j=0; j < lcnt; j++) {
 		mpy3(rdata, prslocal + j, cdata, pts);
 		fft_prs(cdata, mdata, pts);
+
 		/* The real part of the fft has reverse order using fftw compared
 		   with the Intel SPL functions used in the w!nd*ws software */
 		for (i=1; i < pts/2; i++) {
@@ -92,11 +98,13 @@ int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
 		mag(mdata, magdata, pts);
 		max = maxext(magdata, pts, &indx);
 		vmean = mean(magdata, pts);
- 
+
 		if ((vmean * 12) > max)
 			max = 0;
+                else
+                        fprintf(stderr, "accept\n");
 
-		if (sync_locked) {
+		if (sync->locked) {
 			indx_n = wfpk(magdata, indx);
 			indx_n = indx_n/15;
 
@@ -114,6 +122,7 @@ int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
 			indxv = indx;
 		}
 	}
+
 	if (indxv < 0x400)
 		indxv = -indxv;
 	else
@@ -121,16 +130,17 @@ int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
 
 	c = 4.8828125e-7;
 
-	if (sync_locked)
+	if (sync->locked)
 		c = c * indx_n;
 	else
 		c = c * indxv;
 
+        fprintf(stderr, "c: %0.10f\n", c);
+
 	wfref(-indxv, 0x800, iprslocal, prs2);
-
 	mpy(idata, iprslocal, mdata, pts);
-
 	fft_prs(mdata, rdata, pts);
+
 	/* The real part of the fft has reverse order using fftw compared
 	   with the Intel SPL functions used in the w!nd*ws software */
 	for (i=1; i < pts/2; i++) {
@@ -174,15 +184,17 @@ int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
 
 	if ((fabs(c) < (2.4609375e-4/2)) && (fabs(ir) < 350)) {
 		if (lckcnt == 0) {
-			sync_locked = 1;
+			sync->locked = 1;
 		} else {
 			lckcnt--;
-			sync_locked = 0;
+			sync->locked = 0;
 		}
 	} else {
 		lckcnt = 3;
-		sync_locked = 0;
+		sync->locked = 0;
 	}
+
+        fprintf(stderr, "sync_locked: %d lckcnt: %d\n", sync->locked, lckcnt);
 
 	i = c * -8192000.0;
 
@@ -201,26 +213,26 @@ int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
 			} else cv = 0;
 
 			cv = 0x1000 | cv;
-			wf_mem_write(fd, OUTREG0, cv);
+			//wf_mem_write(fd, OUTREG0, cv);
 		}
 	}
 	lms = ems;
 
 	ir = raverage(ir);
-	wf_afc(fd, ir);
+	//wf_afc(fd, ir);
 	
 	t = ir * 81.66400146484375;
 	w1 = (int)t & 0xffff;
 	u = ir * 1.024;
 	w2 = (int)u & 0xffff;
 
-	memcpy(imsg + 2, selstr, 10 * sizeof(unsigned char));
+	memcpy(imsg + 2, symstr, 10 * sizeof(unsigned char));
 	cnt++;
 	imsg[24] = w1 & 0xff;
 	imsg[25] = (w1 >> 8) & 0xff;
 	imsg[26] = w2 & 0xff;  
 	imsg[27] = (w2 >> 8) & 0xff;
-	wf_timing_msg(fd, imsg);
+	//wf_timing_msg(fd, imsg);
 
 	return 0;
 }
@@ -230,70 +242,97 @@ int wf_sync(int fd, unsigned char* prsb, unsigned char *selstr)
 ** the Phase Reference Symbol and then call
 ** wf_sync() to do the synchronization
 */ 
-int prs_assemble(int fd, unsigned char *rdbuf, unsigned char *prsbuf, unsigned char *selstr, int i)
+int prs_assemble(int fd, unsigned char *rdbuf, struct sync_state *sync)
 {
-	static unsigned char seen_flags;
 	int blk;
+        unsigned char *symstr;
+        
+        if (*(rdbuf+9) != 0x02) {
+                return(0);
+        }
+        
+        if (sync->count > 0) {
+                symstr = chgstr;
+                sync->count--;
+        } else {
+                symstr = selstr;
+        }
 
-	blk = *(rdbuf+i+7); /* Block number: 0-3 */
+	blk = *(rdbuf+7); /* Block number: 0-3 */
+
+        fprintf(stderr,"blk = %d, seen_flags = %d\n", blk, sync->seen_flags); 
 
 	if (blk == 0x00) {
-		seen_flags = 1;
-		memcpy(prsbuf, rdbuf+i+12, 512);
+		sync->seen_flags = 1;
+		memcpy(sync->prsbuf, rdbuf+12, 512);
 	}  else {
-		seen_flags |= 1 << blk;
+		sync->seen_flags |= 1 << blk;
 		/* Copy block data, excluding header */ 
-		memcpy(prsbuf+(blk*512), rdbuf+i+12, 512);
+		memcpy(sync->prsbuf+(blk*512), rdbuf+12, 512);
     
-		/* fprintf(stderr,"blk = %d, seen_flags = %d tinit = %d\n",blk,seen_flags,tinit); */
-		if (seen_flags == 15) {
-			seen_flags = 0;
-			wf_sync(fd, prsbuf, selstr);
+		if (sync->seen_flags == 15) {
+			sync->seen_flags = 0;
+			wf_sync(fd, symstr, sync);
 		}
 	}
-	return 0;
+	return(0);
 }
 
-int wfsyncinit(int fd)
+struct sync_state *wfsyncinit(void)
 {
-
+        struct sync_state *sync;
+        
 	/* alloc storage for impulse response calculations */
 	if ((idata = calloc(0x800, sizeof(fftw_complex))) == NULL) {
 		fprintf(stderr,"wfsync: calloc failed for idata");
-		wf_close(fd);
+		return(NULL);
 	}
 
 	if ((cdata = calloc(0x800, sizeof(fftw_complex))) == NULL) {
 		fprintf(stderr,"wfsync: calloc failed for cdata");
-		wf_close(fd);
+		return(NULL);
 	}
 
 	if ((rdata = calloc(0x800, sizeof(fftw_complex))) == NULL) {
 		fprintf(stderr,"wfsync: calloc failed for rdata");
-		wf_close(fd);
+		return(NULL);
 	}
 
 	if ((mdata = calloc(0x800, sizeof(fftw_complex))) == NULL) {
 		fprintf(stderr,"wfsync: calloc failed for mdata");
-		wf_close(fd);
+		return(NULL);
 	}
 
 	if ((prslocal = calloc(0x820, sizeof(fftw_complex))) == NULL) {
 		fprintf(stderr,"wfsync: calloc failed for prslocal");
-		wf_close(fd);
+		return(NULL);
 	}
 
 	if ((iprslocal = calloc(0x820, sizeof(fftw_complex))) == NULL) {
 		fprintf(stderr,"wfsync: calloc failed for iprslocal");
-		wf_close(fd);
+		return(NULL);
 	}
 
 	if ((magdata = calloc(0x800, sizeof(double))) == NULL) {
 		fprintf(stderr,"wfsync: calloc failed for magdata");
-		wf_close(fd);
+		return(NULL);
 	}
 
-	wfrefinit(fd);
+        /* initialise a struct sync_state */
+        if ((sync = malloc(sizeof(struct sync_state))) == NULL) {
+		fprintf(stderr,"wfsync: malloc failed for sync");
+                return(NULL);
+	}
+        
+	if ((sync->prsbuf = calloc(0x800, sizeof(unsigned char))) == NULL) {
+		fprintf(stderr,"wfsync: calloc failed for prsbuf");
+                return(NULL);
+	}
 
-	return 0;
+        sync->count = 0;
+        sync->locked = 0;
+        sync->seen_flags = 0;
+
+	wfrefinit();
+	return sync;
 }

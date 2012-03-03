@@ -36,20 +36,6 @@ static unsigned char rfibs[360];
 /* Skip this many symbols at the start of the file - likely to be bad */
 #define FSKIP 800
 
-/* Replaces wfgetnum used in wf */ 
-int wfgetnum(unsigned char *buf)
-{
-	int i;
-
-	scanf("%d",&i);
-
-	while ((i < 0) || (i > (einf.num_srvs-1))) {
-		fprintf(stderr,"Please select a service (0 to %d): ",einf.num_srvs-1);
-		scanf("%d",&i);
-	}
-	return i;
-}
-
 int main(int argc, char **argv)
 {
 	FILE *ifp, *ofp = NULL;

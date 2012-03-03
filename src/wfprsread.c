@@ -25,6 +25,7 @@ fftw_complex* prs_cread(const char* prsfile, int n)
 	FILE *ifp;
 	fftw_complex *prsbuf, *prsptr;
 	double r, i;
+        int items;
 
 	if ((ifp = fopen(prsfile, "r")) == NULL) {
 		fprintf(stderr,"Couldn't open complex prs file");
@@ -39,7 +40,11 @@ fftw_complex* prs_cread(const char* prsfile, int n)
 	prsptr = prsbuf;
 
 	while (!feof(ifp)) {
-		fscanf(ifp,"%lf %lf",&r,&i);
+                items = fscanf(ifp,"%lf %lf",&r,&i);
+		if (items < 0 && items != EOF) {
+                        perror("prs_cread: fscanf failed");
+                        exit(EXIT_FAILURE);
+                }
 		if (!feof(ifp)) {
 			*(prsptr++) = r + i*I;
 		}

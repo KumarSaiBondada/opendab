@@ -24,6 +24,12 @@
 
 #include "opendab.h"
 
+void stream_dump(fftw_complex *vect, int pts)
+{
+	int j;
+
+}
+
 /* Dump vector of fttw_complex to file suitable for gnuplot */
 
 void cplx_dump(char* fname, fftw_complex* vect, int pts)
@@ -36,13 +42,16 @@ void cplx_dump(char* fname, fftw_complex* vect, int pts)
 		exit(EXIT_FAILURE);
 	}
   
-	fputs("# Real part\n",dfp);
-	for (j=0; j < pts; j++)
-		fprintf(dfp,"%e\n",creal(*(vect+j)));
+	/* fputs("# Real part\n",dfp); */
+	/* for (j=0; j < pts; j++) */
+	/* 	fprintf(dfp,"%e\n",creal(*(vect+j))); */
 
-	fputs("\n\n# Imaginary part\n",dfp);
+	/* fputs("\n\n# Imaginary part\n",dfp); */
+	/* for (j=0; j < pts; j++) */
+	/* 	fprintf(dfp,"%e\n",cimag(*(vect+j))); */
+
 	for (j=0; j < pts; j++)
-		fprintf(dfp,"%e\n",cimag(*(vect+j)));
+                fprintf(dfp, "%e %e\n", creal(*(vect+j)), cimag(*(vect+j)));
 
 	fclose(dfp);
 }
