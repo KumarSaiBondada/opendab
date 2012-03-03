@@ -114,7 +114,7 @@ struct raverage {
 int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest);
 int wfdata(unsigned char *buf, int len, FILE *dest);
 
-void wf_time(struct timespec *tp);
+long wf_time(void);
 
 int wfinitrs();
 int wfdabplusdec(unsigned char *sfbuf, unsigned char *ibuf, int ibytes, int bitrate, FILE *dest);

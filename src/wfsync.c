@@ -41,7 +41,7 @@ fftw_complex *cdata;
 int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 {
 	long ems, dt;
-	int i, j, indxv = 0, indx, indx_n = 0, lcnt;
+	int indxv = 0, indx, indx_n = 0, lcnt;
 	double t,u,v, vi, vs, max, maxv, stf, ir, c, vmean;
 	short w1, w2;
 	unsigned short cv;
@@ -53,15 +53,13 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 
 	fftw_complex tc;
 
-	struct timespec tp;
-
 	prs_scale(sync->prsbuf, idata);
 	ifft_prs(idata, rdata, pts);
 
 	/* The real part of the ifft has reverse order (apart from
 	   the DC term) using fftw compared with the Intel SPL functions
 	   used in the w!nd*ws software. */
-	for (i=1; i < pts/2; i++) {
+	for (int i = 1; i < pts/2; i++) {
 		t = creal(*(rdata+i));
 		*(rdata+i) = *(rdata+i) - t + creal(*(rdata+pts-i));
 		*(rdata+pts-i) = *(rdata+pts-i) - creal(*(rdata+pts-i)) + t;
@@ -75,18 +73,18 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 		lcnt = 25;
 	}
 	/* Copy 0x18 complex points from start of data and append to the end */
-	for (i=0; i < 0x18; i++)
+	for (int i = 0; i < 0x18; i++)
 		*(prslocal + 0x800 + i) = *(prslocal + i);
 
 	maxv = 0;
 
-	for (j=0; j < lcnt; j++) {
+	for (int j = 0; j < lcnt; j++) {
 		mpy3(rdata, prslocal + j, cdata, pts);
 		fft_prs(cdata, mdata, pts);
 
 		/* The real part of the fft has reverse order using fftw compared
 		   with the Intel SPL functions used in the w!nd*ws software */
-		for (i=1; i < pts/2; i++) {
+		for (int i = 1; i < pts/2; i++) {
 			tc = *(mdata+i);
 			*(mdata+i) = *(mdata+pts-i);
 			*(mdata+pts-i) = tc;
@@ -135,7 +133,7 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 
 	/* The real part of the fft has reverse order using fftw compared
 	   with the Intel SPL functions used in the w!nd*ws software */
-	for (i=1; i < pts/2; i++) {
+	for (int i = 1; i < pts/2; i++) {
 		tc = *(rdata+i);
 		*(rdata+i) = *(rdata+pts-i);
 		*(rdata+pts-i) = tc;
@@ -188,13 +186,10 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 
         fprintf(stderr, "c: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, sync->locked, sync->lock_count, sync->count);
 
-	i = c * -8192000.0;
-
-        wf_time(&tp);
-	tp.tv_sec = tp.tv_sec % 1000000;
-	ems = tp.tv_sec * 1000 + tp.tv_nsec/1000000;
+	int i = c * -8192000.0;
 
 	/* Allow at least 60ms between these messages */
+	ems = wf_time();
 	dt = ems - sync->last_cv_msg;
 	if (dt > 60L) {
 		if (i != 0) {
@@ -203,7 +198,10 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 				cv = i;
 				if (cv > 0xff)
 					cv = 0xff;
-			} else cv = 0;
+			}
+                        else {
+                                cv = 0;
+                        }
 
 			cv = 0x1000 | cv;
 			wf_mem_write(fd, OUTREG0, cv);
