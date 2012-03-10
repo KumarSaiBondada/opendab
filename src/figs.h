@@ -118,6 +118,7 @@ struct selsrv {
 	struct data_subch_packet *dt;
 	struct symrange sr; 
         struct cbuf *cbuf;
+        struct pad_state *pad;
 	unsigned int cur_frame;
         unsigned int cifcnt;
         FILE *dest;

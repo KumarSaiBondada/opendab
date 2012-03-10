@@ -21,3 +21,10 @@ struct dls_pad {
         unsigned toggle : 1;
 };
 
+struct pad_state {
+        int bitrate;
+        int sampling_freq;
+        int dls_length;
+        int ci;
+};
+

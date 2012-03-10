@@ -187,6 +187,7 @@ int main (int argc, char **argv)
 								startsym_audio(&sel_srv.sr, sel_srv.au);
 								wfsymsel(selstr, &sel_srv.sr);
                                                                 sel_srv.cbuf = init_cbuf(&sel_srv.sr);
+                                                                sel_srv.pad = init_pad();
 								selected = 1;
 								sync->count = 6; // sync
 								fprintf(stderr,"Type ctrl-c to quit\n");

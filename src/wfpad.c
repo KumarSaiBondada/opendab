@@ -1,8 +1,20 @@
 #include "opendab.h"
 #include "wfbyteops.h"
-#include "pad.h"
 
-void wfpad(unsigned char *buf, int bytes, int bitrate, int mp2_id)
+struct pad_state *init_pad(void)
+{
+        struct pad_state *pad;
+
+        pad = (struct pad_state *)malloc(sizeof(struct pad_state));
+        pad->ci = 0;
+        pad->dls_length = 0;
+        pad->bitrate = 0;
+        pad->sampling_freq = 0;
+        
+        return pad;
+}
+
+void wfpad(struct pad_state *pad, unsigned char *buf, int bytes)
 {
         struct f_pad p;
         struct f_pad_00 p00;
@@ -10,17 +22,13 @@ void wfpad(unsigned char *buf, int bytes, int bitrate, int mp2_id)
         unsigned char short_x_pad[5];
         short fpad;
         int scf_words;
-        
-        /* XXX TODO break these out into a struct pad_state */
-        static int dls_length;
-        static int current_ci;
 
         /* set the number of SCF CRC words for this channel */
         /* pretty much always 4 */
 
-        if (mp2_id == 1) {
+        if (pad->sampling_freq == 48) {
                 /* for 48kHz, if bitrate/channel is >= 56kbit/s, 4 SCF words are used, else 2 */
-                scf_words = (bitrate >= 56) ? 4 : 2;
+                scf_words = (pad->bitrate >= 56) ? 4 : 2;
         }
         else {
                 /* for 24kHz, always 4 SCF words */
@@ -38,24 +46,24 @@ void wfpad(unsigned char *buf, int bytes, int bitrate, int mp2_id)
 
                 if (p00.XPadInd == 1) {
                         if (p.CIFlag == 1) {
-                                current_ci = buf[bytes-(1 + scf_words + 2)];
+                                pad->ci = buf[bytes-(1 + scf_words + 2)];
                                 for (int i = 0; i <= 2; i++)
                                         short_x_pad[i] = (unsigned char)buf[bytes-(i + 2 + scf_words + 2)];
                                 short_x_pad[3] = '\0';
                                 short_x_pad[4] = '\0';
 
-                                if (current_ci > 0) {
-                                        //fprintf(stderr, "  CI: %d\n", current_ci);
+                                if (pad->ci > 0) {
+                                        //fprintf(stderr, "  CI: %d\n", pad->ci);
                                 }
 
-                                if (current_ci == 2) {
+                                if (pad->ci == 2) {
                                         fpad = spack(&buf[bytes-(2 + scf_words + 2)]);
                                         memcpy(&dls, &fpad, 2);
                                         
                                         //fprintf(stderr, "  short x-pad: %s\n", short_x_pad);
                                         //fprintf(stderr, "   DLS: f1: %d f2: %d cmd: %d first: %d toggle: %d\n", dls.f1, dls.f2, dls.cmd, dls.first, dls.toggle);
                                         
-                                        dls_length = dls.f1;
+                                        pad->dls_length = dls.f1;
 
                                         if (dls.first == 2) { // first segment
                                                 fprintf(stderr, "\n%c", short_x_pad[2]);
@@ -73,13 +81,13 @@ void wfpad(unsigned char *buf, int bytes, int bitrate, int mp2_id)
                                         short_x_pad[i] = (unsigned char)buf[bytes-(i + 1 + scf_words + 2)];
                                 short_x_pad[4] = '\0';
 
-                                if (current_ci > 0) {
+                                if (pad->ci > 0) {
                                         //fprintf(stderr, "  short x-pad: %s\n", short_x_pad);
                                 }
                                 
-                                if (current_ci == 2) {
+                                if (pad->ci == 2) {
                                         for (int i = 0; i < 4; i++) {
-                                                if (dls_length-- > 0) {
+                                                if (pad->dls_length-- > 0) {
                                                         fprintf(stderr, "%c", short_x_pad[i]);
                                                 }
                                         }

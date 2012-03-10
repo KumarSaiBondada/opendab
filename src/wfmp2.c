@@ -27,7 +27,7 @@
 ** Check that the audio frame pointed to by 'buf'
 ** is valid - if not then it is silently ignored
 */
-int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest, struct mp2header *mp2h)
+int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest, struct pad_state *pad)
 {
 /* These header bits are constant for DAB */
 #define HMASK 0xfff70e03
@@ -43,22 +43,46 @@ int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest, struct mp2header
 	static int header_valid;
 	static int header_expected = 1;
 
+        struct mp2header {
+                unsigned emphasis       : 2;
+                unsigned orig           : 1;
+                unsigned copyright      : 1;
+                unsigned mode_extension : 2;
+                unsigned mode           : 2;
+                unsigned private_bit    : 1;
+                unsigned padding_bit    : 1;
+                unsigned sampling_freq  : 2;
+                unsigned bit_rate_index : 4;
+                unsigned protection_bit : 1;
+                unsigned layer          : 2;
+                unsigned id             : 1;
+                unsigned syncword       : 12;
+        } mp2h;
+
 	if (header_expected) {
 		header_valid = 1;
 		i = ipack(buf);
-		memcpy(mp2h, &i, sizeof(struct mp2header));
+		memcpy(&mp2h, &i, sizeof(struct mp2header));
 		if (((i & HMASK) ^ HXOR) != 0)
 			header_valid = 0;
-		else if (mp2h->id == 0) {
+		else if (mp2h.id == 0) {
 			header_expected = 0;
-			if (lbrtab[mp2h->bit_rate_index] != bitrate) {
-				/* fprintf(stderr,"Low bitrate conflict FIC:%d MP2 header:%d\n",bitrate,lbrtab[mp2h->bit_rate_index]); */
+			if (lbrtab[mp2h.bit_rate_index] != bitrate) {
+				/* fprintf(stderr,"Low bitrate conflict FIC:%d MP2 header:%d\n",bitrate,lbrtab[mp2h.bit_rate_index]); */
 				header_valid = 0;
 			}
-		} else if (brtab[mp2h->bit_rate_index] != bitrate) {
-			/* fprintf(stderr,"Bitrate conflict FIC:%d MP2 header:%d\n",bitrate,brtab[mp2h->bit_rate_index]); */
+		} else if (brtab[mp2h.bit_rate_index] != bitrate) {
+			/* fprintf(stderr,"Bitrate conflict FIC:%d MP2 header:%d\n",bitrate,brtab[mp2h.bit_rate_index]); */
 			header_valid = 0;
 		}
+                
+                /* let the PAD decoder know the bitrate and sampling frequency */
+                pad->bitrate = bitrate;
+                if (mp2h.id == 1) 
+                        pad->sampling_freq = 48;
+                else
+                        pad->sampling_freq = 24;
+
 	} else
 		header_expected = 1;
 

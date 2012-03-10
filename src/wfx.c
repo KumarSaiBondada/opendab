@@ -119,6 +119,7 @@ int main(int argc, char **argv)
                 startsym_data(&sel_srv.sr, sel_srv.dt->subch);
 
         sel_srv.cbuf = init_cbuf(&sel_srv.sr);
+        sel_srv.pad = init_pad();
         
 	while (!feof(ifp)) {
 		cnt = fread(pktbuf, 524, 1, ifp);
