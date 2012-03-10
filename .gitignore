@@ -13,3 +13,15 @@ src/sync
 *#
 
 *.mp2
+
+src/rsDSPa.bin
+src/rsDSPb.bin
+
+driver/.tmp_versions/
+driver/.wavefinder.ko.cmd
+driver/.wavefinder.mod.o.cmd
+driver/.wavefinder.o.cmd
+driver/Module.symvers
+driver/modules.order
+driver/wavefinder.ko
+driver/wavefinder.mod.c
