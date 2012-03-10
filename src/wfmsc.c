@@ -224,15 +224,20 @@ int msc_decode(struct selsrv *srv)
 	k_viterbi(&metric, obuf, dpbuf, bits, mettab, 0, 0);
 	scramble(NULL, obuf, dpbuf, bits);
 	bit_to_byte(NULL, 1, dpbuf, bits, obuf, &obytes);
-	if (au != NULL && au->dabplus) {
+
+        if (au != NULL) {
+                wfpad(obuf, obytes, au->bitrate);
+
+                if (au->dabplus) {
 #ifdef DABPLUS
-		wfdabplusdec(sfbuf, obuf, obytes, s->bitrate, srv->dest);
+                        wfdabplusdec(sfbuf, obuf, obytes, au->bitrate, srv->dest);
 #else
-	        fprintf(stderr,"Built without DAB+ support - enable in Makefile and rebuild\n");
+                        fprintf(stderr,"Built without DAB+ support - enable in Makefile and rebuild\n");
 #endif
-        }
-        else if (au != NULL) {
-                wfmp2(obuf, obytes, au->bitrate, srv->dest);
+                }
+                else {
+                        wfmp2(obuf, obytes, au->bitrate, srv->dest);
+                }
         }
         else {
                 wfdata(obuf, obytes, srv->dest);

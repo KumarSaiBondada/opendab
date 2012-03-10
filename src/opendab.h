@@ -194,3 +194,5 @@ int wf_r2_msg(int fd, unsigned char *bytes);
 int wf_leds(int fd, int red, int blue, int green);
 int wf_leds_off(int fd);
 int wf_timing_msg(int fd, unsigned char* bytes);
+
+void wfpad(unsigned char *buf, int bytes, int bitrate);
