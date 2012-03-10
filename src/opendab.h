@@ -75,6 +75,24 @@ struct usb_ctrlrequest {
 /* Size of read buffer */
 #define PIPESIZE 16768
 
+/* MP2 Header - see wfmp2.c */
+
+struct mp2header {
+        unsigned emphasis       : 2;
+        unsigned orig           : 1;
+        unsigned copyright      : 1;
+        unsigned mode_extension : 2;
+        unsigned mode           : 2;
+        unsigned private_bit    : 1;
+        unsigned padding_bit    : 1;
+        unsigned sampling_freq  : 2;
+        unsigned bit_rate_index : 4;
+        unsigned protection_bit : 1;
+        unsigned layer          : 2;
+        unsigned id             : 1;
+        unsigned syncword       : 12;
+};
+
 struct cbuf *init_cbuf(struct symrange *sr);
 
 struct blist {
@@ -118,7 +136,7 @@ struct raverage {
         double sa[8];
 };
 
-int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest);
+int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest, struct mp2header *mp2h);
 int wfdata(unsigned char *buf, int len, FILE *dest);
 
 long wf_time(void);
@@ -195,4 +213,4 @@ int wf_leds(int fd, int red, int blue, int green);
 int wf_leds_off(int fd);
 int wf_timing_msg(int fd, unsigned char* bytes);
 
-void wfpad(unsigned char *buf, int bytes, int bitrate);
+void wfpad(unsigned char *buf, int bytes, int bitrate, int mp2_id);

@@ -174,6 +174,7 @@ int msc_decode(struct selsrv *srv)
         struct audio_subch *au = srv->au;
         struct data_subch_packet *dt = srv->dt;
         struct symrange *sr = &srv->sr;
+        struct mp2header mp2h;
 
         int subchsz;
         if (au != NULL)
@@ -226,7 +227,6 @@ int msc_decode(struct selsrv *srv)
 	bit_to_byte(NULL, 1, dpbuf, bits, obuf, &obytes);
 
         if (au != NULL) {
-                wfpad(obuf, obytes, au->bitrate);
 
                 if (au->dabplus) {
 #ifdef DABPLUS
@@ -236,8 +236,10 @@ int msc_decode(struct selsrv *srv)
 #endif
                 }
                 else {
-                        wfmp2(obuf, obytes, au->bitrate, srv->dest);
+                        wfmp2(obuf, obytes, au->bitrate, srv->dest, &mp2h);
                 }
+
+                wfpad(obuf, obytes, au->bitrate, mp2h.id);
         }
         else {
                 wfdata(obuf, obytes, srv->dest);

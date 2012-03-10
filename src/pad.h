@@ -11,3 +11,13 @@ struct f_pad_00 {
         unsigned XPadInd  : 2;
         unsigned FType    : 2;
 };
+
+struct dls_pad {
+        unsigned rfa    : 4;
+        unsigned f2     : 4;
+        unsigned f1     : 4;
+        unsigned cmd    : 1;
+        unsigned first  : 2;
+        unsigned toggle : 1;
+};
+
