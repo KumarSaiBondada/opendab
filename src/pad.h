@@ -25,6 +25,14 @@ struct pad_state {
         int bitrate;
         int sampling_freq;
         int dls_length;
+        int seglen;
+        int left;
         int ci;
+        int toggle;
+        int first;
+        unsigned char label[128];
+        unsigned char crc[2];
+        unsigned char segment[19];
+        unsigned char *ptr;
 };
 

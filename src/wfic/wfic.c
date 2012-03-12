@@ -8,7 +8,7 @@
 #define CRC_POLY    0x8408
 #define CRC_GOOD    0xf0b8
 
-int crc16(unsigned char *buf, int len, int width)
+static int crc16(unsigned char *buf, int len, int width)
 {
     unsigned short crc;
     int c15;

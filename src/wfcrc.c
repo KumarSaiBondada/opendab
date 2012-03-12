@@ -74,6 +74,8 @@ int crccheck(unsigned char* buf, int len)
 		crc = (crc << 8) ^ crctab[((crc >> 8) ^ *ptr++) & 0xff];
 	}
 	
+        //fprintf(stderr, "crc=%x\n", crc);
+
 	return (crc == 0);
 }
 
@@ -137,5 +139,7 @@ int crc16check(unsigned char* buf, int len)
 		crc = (crc << 8) ^ crc16tab[((crc >> 8) ^ *ptr++) & 0xff];
 	}
 	
+        //fprintf(stderr, "crc=%x\n", crc);
+
 	return (crc == 0);
 }
