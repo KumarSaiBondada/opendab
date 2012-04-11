@@ -343,7 +343,7 @@ int fig_0_3(int figlen, int pd, int oe, int cn, unsigned char* fig)
 	struct data_subch_packet *pkt;
         struct service *s;
 
-#if DEBUGd > 2
+#if DEBUGd >= 0
 	fprintf(stderr, "fig_0_3: "); 
 	for (f=0; f < figlen; f++)
 		fprintf(stderr, "%#02x ",*(fig + f));
@@ -357,7 +357,7 @@ int fig_0_3(int figlen, int pd, int oe, int cn, unsigned char* fig)
 	f = ipack(fig);
 	memcpy(&sc1, &f, sizeof(struct servcomp1));
 
-#if DEBUGd > 0
+#if DEBUGd >= 0
 	fprintf(stderr, "fig_0_3: SCId=%d,Rfa=%d,SCCAFlg=%d,DGFlag=%d,Rfu=%d,DSCTy=%d,SubChId=%d,PktAddr=%d,SCCA=%d\n",sc2.SCId,sc2.Rfa,sc2.SCCAFlg,sc2.DGFlag,sc2.Rfu,sc2.DSCTy,sc1.SubChId,sc1.PktAddr,sc1.SCCA);
 #endif
 
@@ -381,6 +381,7 @@ int fig_0_3(int figlen, int pd, int oe, int cn, unsigned char* fig)
 */
 int fig_0_10(int figlen, int pd, int oe, int cn, unsigned char* fig)
 {
+#if DEBUG > 0
 	int f, y, m, d, wd;
 	short g;
 	struct datim dt;
@@ -399,18 +400,13 @@ int fig_0_10(int figlen, int pd, int oe, int cn, unsigned char* fig)
 		m--;
 	wd = ((dt.MJD + 2) % 7) + 1;
 	y += 1900;
-#if DEBUG >= 0
 	fprintf(stderr, "fig_0_10: Rfu=%d MJD=%d(y=%d m=%d d=%d wd=%d) LSI=%d ConfInd=%d UTCFlg=%d UTCHour=%d UTCMin=%d",
 		dt.Rfu,dt.MJD,y,m,d,wd,dt.LSI,dt.ConfInd,dt.UTCFlg,dt.UTCHour,dt.UTCMin);
-#endif
 	if (dt.UTCFlg) {
 		g = spack(fig+2);
 		memcpy(&ut, &g, sizeof(struct utcl));
-#if DEBUG >= 0
 		fprintf(stderr, " UTCSec=%d UTCmsec=%d",ut.UTCSec,ut.UTCmsec);
-#endif
 	}
-#if DEBUG >= 0
 	fprintf(stderr, "\n");
 #endif
 	return 0;

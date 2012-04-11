@@ -119,6 +119,7 @@ struct selsrv {
 	struct symrange sr; 
         struct cbuf *cbuf;
         struct pad_state *pad;
+        struct data_state *data;
 	unsigned int cur_frame;
         unsigned int cifcnt;
         FILE *dest;

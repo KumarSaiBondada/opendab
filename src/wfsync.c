@@ -209,7 +209,7 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 		sync->locked = 0;
 	}
 
-        fprintf(stderr, "c: %0.10f ir: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, ir, sync->locked, sync->lock_count, sync->count);
+        /* fprintf(stderr, "c: %0.10f ir: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, ir, sync->locked, sync->lock_count, sync->count); */
 
 	/* Must be at least 60ms between these messages */
 	long ems = wf_time();

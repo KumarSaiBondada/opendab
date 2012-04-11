@@ -119,8 +119,12 @@ struct raverage {
         double sa[8];
 };
 
+struct data_state {
+        int addr;
+        int dgtype;
+};
+
 int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest, struct pad_state *pad);
-int wfdata(unsigned char *buf, int len, FILE *dest);
 
 long wf_time(void);
 
@@ -198,3 +202,6 @@ int wf_timing_msg(int fd, unsigned char* bytes);
 
 void wfpad(struct pad_state *pad, unsigned char *buf, int bytes);
 struct pad_state *init_pad(void);
+
+int wfdata(struct data_state *d, unsigned char *buf, int pktlen, FILE *dest);
+struct data_state *init_data(int pktaddr);

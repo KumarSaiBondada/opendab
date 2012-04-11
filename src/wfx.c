@@ -120,7 +120,8 @@ int main(int argc, char **argv)
 
         sel_srv.cbuf = init_cbuf(&sel_srv.sr);
         sel_srv.pad = init_pad();
-        
+        sel_srv.data = init_data(sel_srv.dt->pktaddr);
+
 	while (!feof(ifp)) {
 		cnt = fread(pktbuf, 524, 1, ifp);
 		if ((f++ > FSKIP) && (cnt == 1) && (*pktbuf == 0x0c) && (*(pktbuf+1) == 0x62)) {

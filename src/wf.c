@@ -196,6 +196,7 @@ int main (int argc, char **argv)
 								startsym_data(&sel_srv.sr, sel_srv.dt->subch);
 								wfsymsel(selstr, &sel_srv.sr);
                                                                 sel_srv.cbuf = init_cbuf(&sel_srv.sr);
+                                                                sel_srv.data = init_data(sel_srv.dt->pktaddr);
 								selected = 1;
 								sync->count = 6;
 								fprintf(stderr,"Type ctrl-c to quit\n");
