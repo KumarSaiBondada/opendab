@@ -54,6 +54,7 @@ struct cbuf *init_cbuf(struct symrange *sr)
         cbuf->lfp = &cbuf->cb[0];
         cbuf->head = 0;
         cbuf->full = 0;
+        cbuf->lframe = 0;
 
 	return cbuf;
 }
