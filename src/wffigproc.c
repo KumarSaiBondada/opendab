@@ -124,10 +124,10 @@ int fig_1(int figlen, unsigned char *fig)
 
 	f = (struct fig_1*)fig;
 
-#if DEBUG > 1
+//#if DEBUG > 1
 	fprintf(stderr, "Type 1 header = %#02x\n",*fig);
 	fprintf(stderr, "fig_1 extn = %d oe = %d charset = %d\n",f->extn, f->oe, f->charset);
-#endif
+//#endif
 	(*fig_1_jtab[f->extn])(figlen-1, f->oe, f->charset, fig + 1);
 
 	return 0;
@@ -343,7 +343,7 @@ int fig_0_3(int figlen, int pd, int oe, int cn, unsigned char* fig)
 	struct data_subch_packet *pkt;
         struct service *s;
 
-#if DEBUGd >= 0
+#if DEBUGd > 0
 	fprintf(stderr, "fig_0_3: "); 
 	for (f=0; f < figlen; f++)
 		fprintf(stderr, "%#02x ",*(fig + f));
@@ -357,9 +357,9 @@ int fig_0_3(int figlen, int pd, int oe, int cn, unsigned char* fig)
 	f = ipack(fig);
 	memcpy(&sc1, &f, sizeof(struct servcomp1));
 
-#if DEBUGd >= 0
+//#if DEBUGd > 0
 	fprintf(stderr, "fig_0_3: SCId=%d,Rfa=%d,SCCAFlg=%d,DGFlag=%d,Rfu=%d,DSCTy=%d,SubChId=%d,PktAddr=%d,SCCA=%d\n",sc2.SCId,sc2.Rfa,sc2.SCCAFlg,sc2.DGFlag,sc2.Rfu,sc2.DSCTy,sc1.SubChId,sc1.PktAddr,sc1.SCCA);
-#endif
+//#endif
 
 	if ((s = find_service_by_scid(&einf, sc2.SCId)) != NULL) {
                 if (s->dt == NULL) {
@@ -448,10 +448,10 @@ int fig_1_0(int figlen,  int oe, int charset, unsigned char* fig)
 	einf.eid = f->eid;
 	sswab((short*)&(einf.eid));
 	/* fprintf(stderr,"fig_1_0 einf.eid = %#04hx\n",einf.eid); */
-#if DEBUG > 0
+//#if DEBUG > 0
 	fprintf(stderr, "fig_1_0: oe=%d, charset=%d eid=%#04hx label=%s chflag=%#04hx\n",
 		oe,charset,einf.eid,einf.label,f->chflag);
-#endif
+//#endif
 	return 0;
 }
 
@@ -476,9 +476,9 @@ int fig_1_1(int figlen,  int oe, int charset, unsigned char* fig)
 	fig += 16;
 	psl.CharFlgFld = *(short*)fig; /* Pointless, really */
 	sswab(&(psl.CharFlgFld));
-#if DEBUG > 0
+//#if DEBUG > 0
 	fprintf(stderr, "fig_1_1: SId=%#04hx, label=%s chflag=%#04hx\n",psl.SId,psl.label,psl.CharFlgFld);
-#endif
+//#endif
 	if ((s = find_service(&einf, (unsigned short)psl.SId)) != NULL)
 		strncpy(s->label, psl.label, 17);
 	return 0;
@@ -519,10 +519,10 @@ int fig_1_4(int figlen,  int oe, int charset, unsigned char* fig)
 	fig += 16;
 	s.CharFlgFld = *(short*)fig;
 	sswab(&(s.CharFlgFld));
-#if DEBUG > 0
+//#if DEBUG > 0
 	fprintf(stderr, "fig_1_4: PD=%d Rfa=%d SCIds=%d SId=%#04hx label=%s chflag=%#04hx\n",
 		s.PD,s.Rfa,s.SCIds,s.SId,s.label,s.CharFlgFld);
-#endif
+//#endif
 	return 0;
 }
 
@@ -537,9 +537,9 @@ int fig_1_5(int figlen,  int oe, int charset, unsigned char* fig)
 	f = (struct dsl*)fig;
 	f->label[16] = '\0';
         f->SId = ipack(fig);
-#if DEBUG > 0
+//#if DEBUG > 0
 	fprintf(stderr, "fig_1_5: SId=%#08x, label=%s chflag=%#04hx\n",f->SId,f->label,f->CharFlgFld);
-#endif
+//#endif
 	if ((s = find_service(&einf, f->SId)) != NULL)
 		strncpy(s->label, f->label, 17);
 

@@ -58,8 +58,9 @@ int main(int argc, char **argv)
 	FILE *ifp, *ofp = NULL;
 	struct selsrv sel_srv;
 	char infile[80] = "raw.strm";
+        char label[17] = "";
 	const char usage0[] = " is part of OpenDAB. Distributed under the GPL V.3";
-	const char usage1[] = "Usage: wfx [-f] [-o outfile] [infile]";
+	const char usage1[] = "Usage: wfx [-f] [-o outfile] [-l label] [infile]";
 	const char usage2[] = "infile defaults to \"raw.strm\", outfile to \"out.mp2\" -f generates FIC file fic.dat";
 	int nargs, cnt, gen_fic = 0, f = 0;
 
@@ -71,6 +72,14 @@ int main(int argc, char **argv)
 				if (strcmp(argv[argc-nargs], "-f") == 0)
 					gen_fic = 1;
 				break;
+                        case 'l':
+                                if (--nargs) {
+                                        strncpy(label, argv[argc-(nargs)], 16);
+                                } else {
+                                        fprintf(stderr,"Please supply a label for -l\n");
+                                        exit(EXIT_FAILURE);
+                                }
+                                break;
 			case 'h':
 				fprintf(stderr,"%s %s\n", argv[0], usage0);
 				puts(usage1);
@@ -83,7 +92,7 @@ int main(int argc, char **argv)
 				puts(usage1);
 				puts(usage2);
 				exit(EXIT_SUCCESS);
-				break;	
+				break;
 			}
 		} else
 			strcpy(infile,argv[argc-nargs]);
@@ -101,20 +110,21 @@ int main(int argc, char **argv)
 
 	ficinit(&einf);
 
-	while (!feof(ifp) && !labelled(&einf)) {
+	while (!feof(ifp) && !labelled(&einf, label)) {
 		cnt = fread(pktbuf, 524, 1, ifp);
 		if ((cnt == 1) && (*pktbuf == 0x0c) && (*(pktbuf+1) == 0x62)) 
 			if ((*(pktbuf+2) == 2)||(*(pktbuf+2) == 3)||(*(pktbuf+2) == 4))
 				fic_assemble(pktbuf, fsyms, rfibs, ofp);
 	}
-        
+
 	rewind(ifp);
-	disp_ensemble(&einf);
-	user_select_service(&einf, &sel_srv);
-        
+	//disp_ensemble(&einf);
+	//user_select_service(&einf, &sel_srv);
+        label_select_service(&einf, &sel_srv, label);
+
         if (sel_srv.au != NULL && (sel_srv.au->subchid < 64))
                 startsym_audio(&sel_srv.sr, sel_srv.au);
-        
+
         if (sel_srv.dt != NULL && (sel_srv.dt->subch->subchid < 64))
                 startsym_data(&sel_srv.sr, sel_srv.dt->subch);
 

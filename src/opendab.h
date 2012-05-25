@@ -143,6 +143,7 @@ int wfsymsel(unsigned char *sel, struct symrange *r);
 int unpickfig(unsigned char* fig, int figlen);
 
 int user_select_service(struct ens_info* e, struct selsrv *sel_srv);
+int label_select_service(struct ens_info* e, struct selsrv *sel_srv, char *label);
 int disp_ensemble(struct ens_info* e);
 struct service* find_service(struct ens_info *e, int sid);
 struct service* find_service_by_scid(struct ens_info *e, int scid);
@@ -150,7 +151,7 @@ int add_audio_service(struct ens_info *e, struct mscstau *ac, int sid);
 int add_data_service(struct ens_info *e, struct mscpktdat *dt, int sid);
 int add_audio_subchannel(struct ens_info *e, struct audio_subch *s);
 int add_data_subchannel(struct ens_info *e, struct data_subch *s);
-int labelled(struct ens_info *e);
+int labelled(struct ens_info *e, char *label);
 
 int uep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len);
 int eep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len);

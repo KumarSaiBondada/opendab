@@ -232,7 +232,7 @@ int add_data_subchannel(struct ens_info *e, struct data_subch *s)
 /* 
 ** Check all programme services have been labelled
 */
-int labelled(struct ens_info* e)
+int labelled(struct ens_info* e, char *label)
 {  
 	struct service *p;
 	int labelled = 1; 
@@ -249,6 +249,17 @@ int labelled(struct ens_info* e)
 			labelled = 0;
 			break;
 		}
+                else {
+                        if (strncmp(label, p->label, strlen(label)) == 0) {
+                                if (p->pa != NULL || p->sa != NULL || p->dt != NULL)
+                                        labelled = 1;
+                                else
+                                        labelled = 0;
+
+                                break;
+                        }
+                }
+
 		p = p->next;
 	}
 	return labelled;
@@ -354,6 +365,36 @@ int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
 		}
 	}
 	return 0;
+}
+
+int label_select_service(struct ens_info* e, struct selsrv *sel_srv, char *label)
+{
+	struct service *p = e->srv;
+
+        while (p != NULL) {
+                if (strncmp(label, p->label, strlen(label)) == 0) {
+                        fprintf(stderr, "found service label %s\n", label);
+
+                        sel_srv->sid = p->sid;
+                        sel_srv->cur_frame = 0;
+                        sel_srv->cifcnt = 0;
+                        sel_srv->dest = stdout;
+                        if (p->sa != NULL) {
+                                sel_srv->au = p->sa;
+                                sel_srv->dt = NULL;
+                        }
+                        else if (p->dt != NULL) {
+                                sel_srv->au = NULL;
+                                sel_srv->dt = p->dt;
+                        }
+                        else {
+                                sel_srv->au = p->pa;
+                                sel_srv->dt = NULL;
+                        }
+                }
+                p = p->next;
+        }
+        return 0;
 }
 
 int process_fic(unsigned char* ficsyms, unsigned char* rawfibs, FILE *ofp)

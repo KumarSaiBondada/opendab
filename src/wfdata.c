@@ -64,11 +64,6 @@ int wfdata(struct data_state *d, unsigned char *buf, int pktlen, FILE *dest) {
         f = ipack(buf);
 	memcpy(&p, &f, sizeof(struct packet));
 
-#if DEBUG > 0
-        fprintf(stderr, "packetlen=%d datalen=%d cmd=%d addr=%d firstlast=%d contindex=%d\n",
-               p.PacketLen, p.UsefulDataLen, p.Command, p.Address, p.FirstLast, p.ContIndex);
-#endif
-
         switch (p.PacketLen) {
         case 0:
                 len = 22;
@@ -92,6 +87,11 @@ int wfdata(struct data_state *d, unsigned char *buf, int pktlen, FILE *dest) {
         if (crc != computed)
                 return 1;
 
+//#if DEBUG > 0
+        fprintf(stderr, "packetlen=%d datalen=%d cmd=%d addr=%d firstlast=%d contindex=%d\n",
+               p.PacketLen, p.UsefulDataLen, p.Command, p.Address, p.FirstLast, p.ContIndex);
+//#endif
+
         if (p.Address == d->addr) {
 
                 if (p.FirstLast == 2) {
@@ -100,17 +100,30 @@ int wfdata(struct data_state *d, unsigned char *buf, int pktlen, FILE *dest) {
                         fprintf(stderr, "repindex: %d contindex: %d dgtype: %d useraccess %d segment: %d crc: %d extension: %d\n", dg.RepIndex, dg.ContIndex, dg.DGType, dg.UserAccess, dg.Segment, dg.CRC, dg.Extension);
                         s = spack(buf + 5); // assuming no extension field
                         memcpy(&dgs, &s, sizeof(struct data_group_session));
-                        fprintf(stderr, "segment: %d last: %d\n", dgs.Segment, dgs.Last);
+                        //fprintf(stderr, "segment: %d last: %d\n", dgs.Segment, dgs.Last);
 
                         f = ipack(buf + 7); // as before
                         memcpy(&dgu, &f, sizeof(struct data_group_user));
-                        fprintf(stderr, "transportid flag: %d transportid: %d length: %d\n", dgu.TIdFlag, dgu.TransportId, dgu.Length);
+                        //fprintf(stderr, "transportid flag: %d transportid: %d length: %d\n", dgu.TIdFlag, dgu.TransportId, dgu.Length);
 
                         d->dgtype = dg.DGType;
                 }
 
-                if (d->dgtype == 6) {
-                        fwrite(buf + 3, p.UsefulDataLen, 1, dest);
+                if (d->dgtype == 4) {
+                        if (p.FirstLast == 2)
+                                fprintf(stderr, "start type %d packet len %d for tid %d contindex %d\n", d->dgtype, p.UsefulDataLen, dgu.TransportId, dg.ContIndex);
+                        if (p.FirstLast == 1)
+                                fprintf(stderr, "end type %d packet len %d, contindex %d\n", d->dgtype, p.UsefulDataLen, p.ContIndex);
+                        if (p.FirstLast == 0)
+                                fprintf(stderr, "intermediate type %d packet len %d, contindex %d\n", d->dgtype, p.UsefulDataLen, p.ContIndex);
+
+                        //fwrite(buf + 3, p.UsefulDataLen, 1, dest);
+                        //fwrite(buf + 3, p.UsefulDataLen, 1, stderr);
+
+                        //fprintf(stderr, "--> ");
+                        //for (int i=3; i < (p.UsefulDataLen); i++)
+                        //        fprintf(stderr, "%02x ", *(buf + i));
+                        //fprintf(stderr, "\n");
                 }
 
         }
