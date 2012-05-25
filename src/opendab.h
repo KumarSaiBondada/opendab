@@ -151,7 +151,7 @@ int add_audio_service(struct ens_info *e, struct mscstau *ac, int sid);
 int add_data_service(struct ens_info *e, struct mscpktdat *dt, int sid);
 int add_audio_subchannel(struct ens_info *e, struct audio_subch *s);
 int add_data_subchannel(struct ens_info *e, struct data_subch *s);
-int labelled(struct ens_info *e, char *label);
+int labelled(struct ens_info *e);
 
 int uep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len);
 int eep_depuncture(unsigned char *obuf, unsigned char *inbuf, struct audio_subch *s, int* len);

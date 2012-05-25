@@ -232,7 +232,7 @@ int add_data_subchannel(struct ens_info *e, struct data_subch *s)
 /* 
 ** Check all programme services have been labelled
 */
-int labelled(struct ens_info* e, char *label)
+int labelled(struct ens_info* e)
 {  
 	struct service *p;
 	int labelled = 1; 
@@ -242,25 +242,12 @@ int labelled(struct ens_info* e, char *label)
 		return 0;    /* No services yet */
 
 	while (p != NULL) {
-		if (strlen(p->label) == 0) {
 #if DEBUG > 1
-			fprintf(stderr,"labelled: sid %#04x has no label yet\n",p->sid);
+                fprintf(stderr,"labelled: sid %#04x has no label yet\n",p->sid);
 #endif
-			labelled = 0;
-			break;
-		}
-                else {
-                        if (strncmp(label, p->label, strlen(label)) == 0) {
-                                if (p->pa != NULL || p->sa != NULL || p->dt != NULL)
-                                        labelled = 1;
-                                else
-                                        labelled = 0;
-
-                                break;
-                        }
-                }
-
-		p = p->next;
+                labelled = 0;
+                break;
+                p = p->next;
 	}
 	return labelled;
 }

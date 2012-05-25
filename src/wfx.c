@@ -110,7 +110,7 @@ int main(int argc, char **argv)
 
 	ficinit(&einf);
 
-	while (!feof(ifp) && !labelled(&einf, label)) {
+	while (!feof(ifp) && !labelled(&einf)) {
 		cnt = fread(pktbuf, 524, 1, ifp);
 		if ((cnt == 1) && (*pktbuf == 0x0c) && (*(pktbuf+1) == 0x62)) 
 			if ((*(pktbuf+2) == 2)||(*(pktbuf+2) == 3)||(*(pktbuf+2) == 4))
@@ -118,9 +118,8 @@ int main(int argc, char **argv)
 	}
 
 	rewind(ifp);
-	//disp_ensemble(&einf);
-	//user_select_service(&einf, &sel_srv);
-        label_select_service(&einf, &sel_srv, label);
+	disp_ensemble(&einf);
+	user_select_service(&einf, &sel_srv);
 
         if (sel_srv.au != NULL && (sel_srv.au->subchid < 64))
                 startsym_audio(&sel_srv.sr, sel_srv.au);
@@ -130,7 +129,6 @@ int main(int argc, char **argv)
 
         sel_srv.cbuf = init_cbuf(&sel_srv.sr);
         sel_srv.pad = init_pad();
-        sel_srv.data = init_data(sel_srv.dt->pktaddr);
 
 	while (!feof(ifp)) {
 		cnt = fread(pktbuf, 524, 1, ifp);
