@@ -20,7 +20,7 @@
 */
 #include "opendab.h"
 
-int wf_timing(int fd, int msgnum)
+int wf_timing(struct wavefinder *wf, int msgnum)
 {
 	unsigned char m0[] = {0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 			      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -70,7 +70,7 @@ int wf_timing(int fd, int msgnum)
 		break;
 	}
 
-	wf_timing_msg(fd, p);
+	wf_timing_msg(wf, p);
 
 	return 0;
 }

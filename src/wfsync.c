@@ -35,7 +35,7 @@ static unsigned char selstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 /* Use this before changing the symbol selection */
 static unsigned char chgstr[] = {0x00, 0xf0, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
 
-static void wf_sync_cvmsg(int fd, double c)
+static void wf_sync_cvmsg(struct wavefinder *wf, double c)
 {
         unsigned short cv;
         int i = c * -8192000.0;
@@ -53,11 +53,11 @@ static void wf_sync_cvmsg(int fd, double c)
                 }
 
                 cv = 0x1000 | cv;
-                wf_mem_write(fd, OUTREG0, cv);
+                wf_mem_write(wf, OUTREG0, cv);
         }
 }
 
-static void wf_sync_imsg(int fd, unsigned char *symstr,  double ir)
+static void wf_sync_imsg(struct wavefinder *wf, unsigned char *symstr,  double ir)
 {
 	unsigned char imsg[] = {0x7f, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
@@ -73,7 +73,7 @@ static void wf_sync_imsg(int fd, unsigned char *symstr,  double ir)
 	imsg[26] = w2 & 0xff;  
 	imsg[27] = (w2 >> 8) & 0xff;
 
-	wf_timing_msg(fd, imsg);
+	wf_timing_msg(wf, imsg);
 }
 
 static double calc_c(struct sync_state *sync, fftw_complex *idata, int pts)
@@ -186,7 +186,7 @@ static double calc_ir(struct sync_state *sync, fftw_complex *idata, int pts)
         return ir;
 }
 
-int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
+int wf_sync(struct wavefinder *wf, unsigned char *symstr, struct sync_state *sync)
 {
 	int pts = 0x800;
 
@@ -209,13 +209,13 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 		sync->locked = 0;
 	}
 
-        /* fprintf(stderr, "c: %0.10f ir: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, ir, sync->locked, sync->lock_count, sync->count); */
+        fprintf(stderr, "c: %0.10f ir: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, ir, sync->locked, sync->lock_count, sync->count);
 
 	/* Must be at least 60ms between these messages */
 	long ems = wf_time();
 	long dt = ems - sync->last_cv_msg;
 	if (dt > 60L) {
-                wf_sync_cvmsg(fd, c);
+                wf_sync_cvmsg(wf, c);
                 sync->last_cv_msg = ems;
 	}
 
@@ -224,12 +224,12 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 	/* Must be at least 250ms between AFC messages */
 	dt = ems - sync->last_afc_msg;
         if (dt > 250L) {
-                wf_afc(fd, &sync->afc_offset, ir);
+                wf_afc(wf, &sync->afc_offset, ir);
                 sync->last_afc_msg = ems;
         }
 
         /* Send this message every time */
-        wf_sync_imsg(fd, symstr, ir);
+        wf_sync_imsg(wf, symstr, ir);
 
 	return 0;
 }
@@ -239,7 +239,7 @@ int wf_sync(int fd, unsigned char *symstr, struct sync_state *sync)
 ** the Phase Reference Symbol and then call
 ** wf_sync() to do the synchronization
 */ 
-int prs_assemble(int fd, unsigned char *rdbuf, struct sync_state *sync)
+int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf, struct sync_state *sync)
 {
 	int blk;
         unsigned char *symstr;
@@ -267,7 +267,7 @@ int prs_assemble(int fd, unsigned char *rdbuf, struct sync_state *sync)
     
 		if (sync->seen_flags == 15) {
 			sync->seen_flags = 0;
-			wf_sync(fd, symstr, sync);
+			wf_sync(wf, symstr, sync);
 		}
 	}
 	return(0);

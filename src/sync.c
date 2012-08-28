@@ -28,7 +28,6 @@
 extern struct ens_info einf;
 extern int fibcnt;
 
-int fdw;
 unsigned char *fsyms, *rfibs, *rdbuf;
 FILE *of = NULL, *ffp = NULL;
 
@@ -46,9 +45,10 @@ int main(int argc, char **argv)
 	const char usage1[] = "Usage: wfx [-f] [-o outfile] [infile]";
 	const char usage2[] = "infile defaults to \"raw.strm\", outfile to \"out.mp2\" -f generates FIC file fic.dat";
 	int nargs;
-	int fd = 0, k;
+	int k;
         int l = 0;
         struct sync_state *sync;
+        struct wavefinder *wf;
 
 	nargs = argc;
 	while (nargs-- > 1) {
@@ -93,7 +93,7 @@ int main(int argc, char **argv)
                 l *= 16768;
                 
 		for (k=0; k < l; k+=524) {
-                        prs_assemble(fd, (rdbuf + k), sync);
+                        prs_assemble(wf, (rdbuf + k), sync);
 		}
 	}
 	exit(EXIT_SUCCESS);	

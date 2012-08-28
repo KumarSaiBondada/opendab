@@ -108,13 +108,11 @@
 #define LMX2331A 0
 
 unsigned int reverse_bits(unsigned int, unsigned int);
-int wf_tune_msg(int, unsigned int, unsigned char, unsigned char, unsigned char);
-
 
 /*
 ** Tune the WaveFinder
 */
-void wf_tune(int fd, double freq)
+void wf_tune(struct wavefinder *wf, double freq)
 {
 #define TBUFSIZE 12
 	unsigned char lband;
@@ -134,15 +132,15 @@ void wf_tune(int fd, double freq)
 
 	/* Load the RF R counter of the Band L PLL - constants */
 	rc = 0x100000 | reverse_bits(R_2331A, 15) << 5 | 0x10;
-	wf_tune_msg(fd, rc, 22, LMX2331A, lband);
+	wf_tune_msg(wf, rc, 22, LMX2331A, lband);
 
 	/* Load the RF N counter of the Band L PLL - constants */
 	rc = 0x300000 | reverse_bits(NRFA_2331A, 7) << 13 | reverse_bits(NRFB_2331A, 11) << 2 | 2;
-	wf_tune_msg(fd, rc, 22, LMX2331A, lband);
+	wf_tune_msg(wf, rc, 22, LMX2331A, lband);
 
 	/* Load the IF R counter of the Band L PLL - constants */ 
 	rc = reverse_bits(R_2331A, 15) << 5 | 0x10;
-	wf_tune_msg(fd, rc, 22, LMX2331A, lband);
+	wf_tune_msg(wf, rc, 22, LMX2331A, lband);
 
 	/* Load the N counter of the Band III PLL - this does the tuning */
 	f_vcod = (freq*1e6 + IF)/(F_OSC/R_1511);
@@ -150,18 +148,18 @@ void wf_tune(int fd, double freq)
 
 	/* Load the IF N counter of the Band L PLL - constants */
 	rc = 0x200000 | reverse_bits(NIFA_2331A, 7) << 13 | reverse_bits(NIFB_2331A, 11) << 2 | 2;
-	wf_tune_msg(fd, rc, 22, LMX2331A, lband);
+	wf_tune_msg(wf, rc, 22, LMX2331A, lband);
 
 	b_1511 = f_vco / P_1511;
 	a_1511 = f_vco % P_1511;
   
 	/* Load the R counter and S latch of the Band III PLL - constants */
 	rc = 0x8000 | (reverse_bits((int)R_1511, 14)) << 1 | 1;
-	wf_tune_msg(fd, rc, 16, LMX1511, lband);
+	wf_tune_msg(wf, rc, 16, LMX1511, lband);
 
 	/* Load the N counter (as A and B counters) of the Band III PLL */
 	rc = reverse_bits(a_1511,7) << 11 | reverse_bits(b_1511,11);
-	wf_tune_msg(fd, rc, 19, LMX1511, lband);
+	wf_tune_msg(wf, rc, 19, LMX1511, lband);
 }
 
 /*

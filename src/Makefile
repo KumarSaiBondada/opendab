@@ -24,17 +24,17 @@
 
 UNAME=$(shell uname)
 
-CC=gcc
+CC=arm-none-eabi-gcc
 CFLAGS= -g -Wall -Werror -O3 -std=c99
-LIBS=-lfftw3 -lm 
+LIBS=-lfftw3 -lm -lusb-1.0.0
 WFIC=./wfic
 LIBPATH=-L $(WFIC)
 
 # MacPorts libfftw on OS X
 
 ifeq ($(UNAME), Darwin)
-CFLAGS += -I /opt/local/include
-LIBPATH += -L /opt/local/lib
+CFLAGS += -I /opt/local/include -I /opt/local/include/libusb-1.0
+LIBPATH += -L /opt/local/lib -L /opt/local/lib
 endif
 
 # librt for clock_gettime on Linux
@@ -56,8 +56,8 @@ COMMON_OBJS=	wfbyteops.o wfcrc.o wfdebug.o wfficproc.o wffigproc.o wffirecrc.o w
 		wfdata.o
 
 WF_OBJS=	wf.o wfafc.o wfclose.o wfimp.o wfinit.o wfleds.o wfcmd.o \
-		wfpk.o wfprsread.o wfravg.o wfread.o wfref.o wfscale.o wfsleep.o \
-		wfsync.o wftiming.o wftune.o wfusb.o
+		wfpk.o wfprsread.o wfravg.o wfref.o wfscale.o wfsleep.o \
+		wfsync.o wftiming.o wftune.o wfusbmsg.o wflibusb.o
 
 WFX_OBJS=	wfx.o
 
@@ -66,13 +66,13 @@ WFXALL_OBJS=	wfxall.o
 PRSGEN_OBJS=    prsgen.o
 
 SYNC_OBJS=	sync.o wfafc.o wfclose.o wfimp.o wfinit.o wfleds.o \
-		wfpk.o wfprsread.o wfravg.o wfread.o wfref.o wfscale.o wfsleep.o \
-		wfsync.o wftiming.o wftune.o wfusb.o
+		wfpk.o wfprsread.o wfravg.o wfref.o wfscale.o wfsleep.o \
+		wfsync.o wftiming.o wftune.o wfusbmsg.o wflibusb.o
 
 #SRCS=   wfbyteops.c wfafc.c wfclose.c wfcmd.c  wfcrc.c wfdabplus.c wfdebug.c wfficproc.c wffigproc.c \
 	wffirecrc.c wfimp.c wfinit.c wfleds.c wfmaths.c wfmdepunc.c wfmp2.c wfmsc.c wfpk.c wfprsread.c \
-	wfravg.c wfread.c wfref.c wfscale.c wfsleep.c wfsymsel.c wfsync.c wftables.c \
-	wftiming.c wftune.c wfusb.c
+	wfravg.c wfref.c wfscale.c wfsleep.c wfsymsel.c wfsync.c wftables.c \
+	wftiming.c wftune.c wfusbmsg.c wflibusb.c
 
 INCS= opendab.h wfsl11r.h $(WFIC)/wfic.h $(DRIVER)/wavefinder.h
 

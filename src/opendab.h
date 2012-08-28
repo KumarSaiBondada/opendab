@@ -37,26 +37,24 @@
 #include <math.h>
 #include <complex.h>
 #include <fftw3.h>
+#include <libusb.h>
 
 #include "wfsl11r.h"
 #include "figs.h"
 #include "pad.h"
 
-/* TODO: eliminate these declarations - should be unnecessary */
-#define USB_TYPE_VENDOR                 (0x02 << 5)
-typedef unsigned char __u8;
-typedef unsigned short __u16;
+/* Size of read buffer */
+#define PIPESIZE 16768
 
-struct usb_ctrlrequest {
-        __u8 bRequestType;
-        __u8 bRequest;
-        __u16 wValue;
-        __u16 wIndex;
-        __u16 wLength;
-	} __attribute__ ((packed));
-/* TODO: eliminate the above declarations - should be unnecessary */
+#define WAVEFINDER_IF 0
+#define WAVEFINDER_ISOPIPE 0x81
 
-#include "../driver/wavefinder.h"
+struct wavefinder {
+        struct libusb_device_handle *devh;
+        struct libusb_transfer *xfr;
+        unsigned char buf[PIPESIZE];
+        unsigned char *bufptr;
+};
 
 #define TRUE -1;
 #define FALSE 0;
@@ -72,9 +70,6 @@ struct usb_ctrlrequest {
 #define SLMEM 3
 #define WFTUNE 4
 #define WFTIMING 5
-
-/* Size of read buffer */
-#define PIPESIZE 16768
 
 struct cbuf *init_cbuf(struct symrange *sr);
 
@@ -132,7 +127,7 @@ int wfinitrs();
 int wfdabplusdec(unsigned char *sfbuf, unsigned char *ibuf, int ibytes, int bitrate, FILE *dest);
 
 struct sync_state *wfsyncinit();
-int prs_assemble(int fd, unsigned char *rdbuf, struct sync_state *sync);
+int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf, struct sync_state *sync);
 
 int msc_assemble(unsigned char *symbuf, struct selsrv *srv);
 int fic_assemble(unsigned char* rdbuf, unsigned char* ficsyms, unsigned char* rawfibs, FILE *ofp);
@@ -185,21 +180,34 @@ int wfref(int indx, int pts, fftw_complex* outp, fftw_complex* inp);
 
 void wf_sleep(int usec);
 
-int wf_init(int fd, double freq);
-void wf_tune(int fd, double freq);
-int wfcatch(int fd);
+struct wavefinder *wf_open(char *devname);
+int wf_close(struct wavefinder *wf);
+int wf_read(struct wavefinder *wf, unsigned char *rdbuf, unsigned int *len);
+int wf_usb_ctrl_msg(struct wavefinder *wf, int request,
+                    int value, int index, unsigned char *bytes, int size);
+
+
+int wf_sendmem(struct wavefinder *wf, int value, int index, unsigned char *bytes, int size);
+int wf_mem_write(struct wavefinder *wf, unsigned short addr, unsigned short val);
+int wf_tune_msg(struct wavefinder *wf, unsigned int reg, unsigned char bits,
+                unsigned char pll, unsigned char lband);
+int wf_timing_msg(struct wavefinder *wf, unsigned char* bytes);
+int wf_r2_msg(struct wavefinder *wf, unsigned char* bytes);
+int wf_r1_msg(struct wavefinder *wf, unsigned char* bytes);
+
+int wf_init(struct wavefinder *wf, double freq);
+void wf_tune(struct wavefinder *wf, double freq);
+int wfcatch(struct wavefinder *wf);
 int wfgetnum(int max);
-int wf_close(int fd);
-int wf_timing(int fd, int msgnum);
-int wf_read(int fd, unsigned char *rdbuf, int *len);
-int wf_afc(int fd, double *offset, double afcv);
-int wf_mem_write(int fd, unsigned short addr, unsigned short val);
-int wf_sendmem(int fd, int value, int index, unsigned char *bytes, int size);
-int wf_r1_msg(int fd, unsigned char *bytes);
-int wf_r2_msg(int fd, unsigned char *bytes);
-int wf_leds(int fd, int red, int blue, int green);
-int wf_leds_off(int fd);
-int wf_timing_msg(int fd, unsigned char* bytes);
+int wf_timing(struct wavefinder *wf, int msgnum);
+int wf_afc(struct wavefinder *wf, double *offset, double afcv);
+int wf_mem_write(struct wavefinder *wf, unsigned short addr, unsigned short val);
+int wf_sendmem(struct wavefinder *wf, int value, int index, unsigned char *bytes, int size);
+int wf_r1_msg(struct wavefinder *wf, unsigned char *bytes);
+int wf_r2_msg(struct wavefinder *wf, unsigned char *bytes);
+int wf_leds(struct wavefinder *wf, int red, int blue, int green);
+int wf_leds_off(struct wavefinder *wf);
+int wf_timing_msg(struct wavefinder *wf, unsigned char* bytes);
 
 void wfpad(struct pad_state *pad, unsigned char *buf, int bytes);
 struct pad_state *init_pad(void);

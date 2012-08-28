@@ -23,7 +23,7 @@
 */
 #include "opendab.h"
 
-int wf_afc(int fd, double *offset, double afcv)
+int wf_afc(struct wavefinder *wf, double *offset, double afcv)
 {
 	double a;
 	int i;
@@ -48,7 +48,7 @@ int wf_afc(int fd, double *offset, double afcv)
 			i = 0xffff;
 		
 		afc_val = i & 0xfffc;
-		wf_mem_write(fd, DACVALUE, afc_val);
+		wf_mem_write(wf, DACVALUE, afc_val);
 	}
         
         return 0;

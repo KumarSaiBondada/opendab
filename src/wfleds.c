@@ -24,24 +24,22 @@
 */
 #include "opendab.h"
 
-int wf_mem_write(int, unsigned short, unsigned short);
-
 /*
 ** Set red, green and blue LED intensities on the given WaveFinder
 ** A negative colour component causes that component to be unchanged 
 */
-int wf_leds(int fd, int red, int blue, int green)
+int wf_leds(struct wavefinder *wf, int red, int blue, int green)
 {
 	if (!(red < 0)) {
-		wf_mem_write(fd, PWMCH2STOP, red);
+		wf_mem_write(wf, PWMCH2STOP, red);
 	}
 
 	if (!(green < 0)) {
-		wf_mem_write(fd, PWMCH1STOP, green);
+		wf_mem_write(wf, PWMCH1STOP, green);
 	}
 
 	if (!(blue < 0)) {
-		wf_mem_write(fd, PWMCH3STOP, blue);
+		wf_mem_write(wf, PWMCH3STOP, blue);
 	}
 
 	return 0;
@@ -51,7 +49,7 @@ int wf_leds(int fd, int red, int blue, int green)
 /*
 ** Turn LEDs off convenience function
 */
-int wf_leds_off(int fd)
+int wf_leds_off(struct wavefinder *wf)
 {
-	return(wf_leds(fd,0x3ff, 0x3ff, 0x3ff));
+	return(wf_leds(wf, 0x3ff, 0x3ff, 0x3ff));
 }

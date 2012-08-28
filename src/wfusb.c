@@ -18,10 +18,7 @@
     You should have received a copy of the GNU General Public License
     along with OpenDAB.  If not, see <http://www.gnu.org/licenses/>.
 */
-/*
-** USB control message routine - uses kernel driver
-** All control messages pass through here, so can be printed for debugging etc.
-*/
+
 #include "opendab.h"
 
 /* DEBUG:
@@ -30,7 +27,82 @@
 */
 #define DEBUG 0
 
-int wf_usb_ctrl_msg(int fd, int requesttype, int request, int value, int index, unsigned char *bytes, int size)
+#ifndef __APPLE__
+
+#define USB_TYPE_VENDOR (0x02 << 5)
+
+struct wavefinder *wf_open(char *devname)
+{
+        int fd;
+        struct wavefinder *wf;
+
+	fd = open(devname,O_RDWR);
+        if (fd == -1)
+                return NULL;
+
+        if ((wf = malloc(sizeof (struct wavefinder))) == NULL)
+                return NULL;
+
+        wf->fd = fd;
+        return wf;
+}
+
+int wf_close(struct wavefinder *wf)
+{
+	wf_leds_off(wf);
+	wf_mem_write(wf, OUTREG1, 0x2000);
+	close(wf->fd);
+	return 0;
+}
+
+/*
+** Read incoming data from the WaveFinder.
+**
+** There is one isochronous stream which contains
+** (at least) two types of data:
+**
+** (i) Phase Reference Symbol (PRS) used for synchronization
+** (ii) QPSK symbols
+**
+** Data arrives in 524-byte blocks which have a 12-byte
+** header
+**
+** 4 PRS blocks are needed to make a 2048 byte PRS (Mode I)
+**
+**   0c 62 01 05 36 20 04 03 00 02 00 00 58 c0 66 6a
+**   ^^ ^^ 		  ^^    ^^       ^^ 
+** Constant	      Block no.	PRS      Data starts here
+**
+** Other symbols forming the FIC and MSC look like this:
+**   0c 62 07 0e f8 20 01 00 80 01 00 00 2f 3e d9 ab
+**   ^^ ^^ ^^ ^^                ^^       ^^
+**     |   |   Frame no.        QPSK     Data starts here
+**     |   Symbol no.
+**     |   (0-76)
+** Constant
+**
+*/
+int wf_read(struct wavefinder *wf, unsigned char *rdbuf, unsigned int* len)
+{
+	int l = 0;
+	
+	while (l == 0)
+		l = read(wf->fd,rdbuf,PIPESIZE);
+
+	if (l < 0)
+		perror("wf_read");
+	else
+		*len = l;
+
+	return 0;
+}
+
+/*
+** USB control message routine - uses kernel driver
+** All control messages pass through here, so can be printed for debugging etc.
+*/
+int wf_usb_ctrl_msg(struct wavefinder *wf, int request,
+                    int value, int index, unsigned char *bytes, int size)
 {
 	ctrl_transfer_t ctl;
 	int ret;
@@ -41,15 +113,16 @@ int wf_usb_ctrl_msg(int fd, int requesttype, int request, int value, int index, 
 	static struct timeval itv;
 	struct timeval ctv;
 #endif
-	ctl.setup.bRequestType=requesttype;
-	ctl.setup.bRequest=request;
-	ctl.setup.wValue=value;
-	ctl.setup.wIndex=index;
-	ctl.size=size;
+	ctl.setup.bRequestType = USB_TYPE_VENDOR;
+	ctl.setup.bRequest = request;
+	ctl.setup.wValue = value;
+	ctl.setup.wIndex = index;
+	ctl.size = size;
+
 	/* TODO: this copy shouldn't really be needed */
 	memcpy(ctl.data, bytes, size*sizeof(unsigned char));
  
-	if ((ret=ioctl(fd,IOCTL_WAVEFINDER_CMSGW,&ctl)) == -1) {
+	if ((ret=ioctl(wf->fd,IOCTL_WAVEFINDER_CMSGW,&ctl)) == -1) {
 		perror("wf_usb_ctrl_msg");
 		exit(EXIT_FAILURE);
 	}
@@ -78,83 +151,4 @@ int wf_usb_ctrl_msg(int fd, int requesttype, int request, int value, int index, 
 	return 0;
 }
 
-/*
-** Convenience function that calls wf_usb_ctrl_msg() with
-** bmRequestType = USB_TYPE_VENDOR and bmRequest = SLMEM
-*/
-int wf_sendmem(int fd, int value, int index, unsigned char *bytes, int size)
-{
-	/* int i;
-	   printf("SLMEM Value=%#hx, Index=%d, Length=%d\n",value, index, size);
-	   for (i=0; i < size; i++)
-	   printf("%#0hhx ",*(bytes+i));
-	   printf("\n");*/
-	return(wf_usb_ctrl_msg(fd, USB_TYPE_VENDOR, SLMEM, value, index, bytes, size));
-}
-
-/*
-** Write a single 16-bit word to a location
-** in the WaveFinder's SL11R address space.
-** Automatically fills in the data buffer with the values
-** from the index and value fields.
-**
-*/
-int wf_mem_write(int fd, unsigned short addr, unsigned short val)
-{
-	unsigned char bytes[4];
-
-	bytes[0] = (unsigned char)(addr & 0xff);
-	bytes[1] = (unsigned char)((addr >> 8) & 0xff);
-	bytes[2] = (unsigned char)(val & 0xff);
-	bytes[3] = (unsigned char)((val >> 8) & 0xff);
-
-	/* fprintf(stderr,"%x, %x, %x, %x\n", bytes[0], bytes[1], bytes[2], bytes[3]); */
-
-	return(wf_usb_ctrl_msg(fd, USB_TYPE_VENDOR, SLMEM, addr, val, bytes, 4));
-}
-
-/*
-** Send a tuning message
-*/
-int wf_tune_msg(int fd, unsigned int reg, unsigned char bits, unsigned char pll, unsigned char lband)
-{
-#define TBUFSIZE 12
-	unsigned char tbuf[TBUFSIZE];
-
-	memset(tbuf, 0, TBUFSIZE);  /* zero buffer */
-	tbuf[0] = reg & 0xff;
-	tbuf[1] = (reg >> 8) & 0xff;
-	tbuf[2] = (reg >> 16) & 0xff;
-	tbuf[3] = (reg >> 24) & 0xff;  
-	tbuf[4] = bits;     /* no. of reg. bits */
-	tbuf[6] = pll;      /* 1 = select LMX1511, 0 = select LMX2331A */
-	tbuf[8] = lband ? 1 : 0;
-	tbuf[11] = 0x10;  /* TODO: Check what this byte does, if anything */
-	return(wf_usb_ctrl_msg(fd, USB_TYPE_VENDOR, WFTUNE, 0, 0, tbuf, TBUFSIZE));
-	/* printf("WTUNE Length=%d\n",TBUFSIZE);
-	   for (i=0; i < TBUFSIZE; i++)
-	   printf("%#0hhx ",*(tbuf+i));
-	   printf("\n"); */
-}
-
-/* 
-** Send a 32 byte timing control/symbol selection message
-*/
-int wf_timing_msg(int fd, unsigned char* bytes)
-{
-	return(wf_usb_ctrl_msg(fd, USB_TYPE_VENDOR, WFTIMING, 0, 0, bytes, 32));
-}  
-
-/*
-** Send a pair of 64 byte request=1, request=2 messages
-** TODO: work out what these messages do etc.
-*/
-int wf_r2_msg(int fd, unsigned char* bytes)
-{
-	return(wf_usb_ctrl_msg(fd, USB_TYPE_VENDOR, 2, 0, 0x80, bytes, 64));
-}
-
-int wf_r1_msg(int fd, unsigned char* bytes)
-{
-	return(wf_usb_ctrl_msg(fd, USB_TYPE_VENDOR, 1, 0, 0x80, bytes, 64));
-}
+#endif

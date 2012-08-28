@@ -31,7 +31,6 @@ extern int fibcnt;
 /* Select all symbols by default */
 static unsigned char selstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
-int fdw;
 unsigned char *fsyms, *rfibs, *rdbuf;
 FILE *of = NULL, *ffp = NULL;
 
@@ -42,11 +41,13 @@ int main (int argc, char **argv)
 	char devname[80] = "/dev/wavefinder0";
 	char ficfile[80] = "fic.dat";
         const char usage[] = " is part of OpenDAB. Distributed under the GPL V.3\nUsage: wf [-f] [-d outfile] [-w devname][freq]\n-d dumps ensemble to outfile caution - huge!\n-w uses Wavefinder devname\n-f generates FIC file 'fic.dat' (ignored if '-d' specified)\nfreq defaults to 225.648MHz (BBC National DAB)";	
-	int fd, k, nargs, sym;
-        int l = 0, gen_fic = 0, gen_dump = 0;
+	int nargs, sym;
+        unsigned int k, l = 0;
+        int gen_fic = 0, gen_dump = 0;
 	int slock = 0, enslistvisible = 0;
 	int selected = 0;
         struct sync_state *sync;
+        struct wavefinder *wf;
 
 	/* double freq = 218.640;*/ /* DRg */
 	/* double freq = 222.064;*/ /* Digital 1 */
@@ -98,42 +99,42 @@ int main (int argc, char **argv)
 			sscanf(argv[argc-nargs],"%le",&freq);
 	}
 	/* Open WaveFinder */	
-	fd = open(devname,O_RDWR);
-	if (fd == -1) {
-		perror(devname);
+        wf = wf_open(devname);
+	if (wf == NULL) {
+		perror("wavefinder");
 		exit(EXIT_FAILURE);
 	}
 
-	wfcatch(fd);   /* Install handler to catch SIGTERM */
+	wfcatch(wf);   /* Install handler to catch SIGTERM */
 
 	if (gen_dump) {
 		if ((of = fopen(outfile,"w")) == NULL) {
 			perror("Output file open failed");
-			wf_close(fd);
+			wf_close(wf);
 		}
 	} else if (gen_fic)
 		if ((ffp = fopen(ficfile,"w")) == NULL) {
 			perror("FIC output file open failed");
-			wf_close(fd);
+			wf_close(wf);
 		}
 
 	
 	/* Initialize synchronization system - PRS data, storage etc */
 	if ((sync = wfsyncinit()) == NULL) {
                 perror("wfsyncinit failed");
-                wf_close(fd);
+                wf_close(wf);
         }
 
 	/* Initialize read buffer storage */
 	if ((rdbuf = calloc(PIPESIZE, sizeof(unsigned char))) == NULL) {
 		fprintf(stderr,"main: calloc failed for rdbuf");
-		wf_close(fd);
+		wf_close(wf);
 	}
 
 	/* Allocate storage for symbols 2, 3 and 4 which comprise the FIC */
 	if ((fsyms = calloc(384 * 3, sizeof(unsigned char))) == NULL) {
 		fprintf(stderr,"main: calloc failed for fsyms");
-		wf_close(fd);
+		wf_close(wf);
 	}
 
 	/* Allocate storage for decoded, but "unparsed" FIC
@@ -141,7 +142,7 @@ int main (int argc, char **argv)
 	*/
 	if ((rfibs = calloc(360*16, sizeof(unsigned char))) == NULL) {
 		fprintf(stderr,"main: calloc failed for rfibs");
-		wf_close(fd);
+		wf_close(wf);
 	}
 
 	if (!gen_dump) {
@@ -152,14 +153,16 @@ int main (int argc, char **argv)
 
 	/* Initalize Wavefinder */
 	fprintf(stderr,"Initialization ");
-	wf_init(fd, freq);
+	wf_init(wf, freq);
 	fprintf(stderr,"complete.\n");
+
+        exit(0);
 
 	fprintf(stderr,"Sync ");
 	for (;;) {
-		wf_read(fd, rdbuf, &l);
+		wf_read(wf, rdbuf, &l);
 		for (k=0; k < l; k+=524) {
-                        prs_assemble(fd, (rdbuf + k), sync);
+                        prs_assemble(wf, (rdbuf + k), sync);
 
 			if (sync->locked && !slock) {
 				slock = 1;

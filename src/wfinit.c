@@ -51,7 +51,7 @@
 ** Also: 1. The first word of the rsDSP[ab].bin files is the entry point.
 **       2. Only bytes from offset 0x80 to 0x2000 are uploaded from each file.
 */
-int wf_boot_dsps(int fd)
+int wf_boot_dsps(struct wavefinder *wf)
 {
 	/* The other software uses this length (16 bit words) for the data transfer stage */ 
 #define USBDATALEN 31
@@ -75,45 +75,48 @@ int wf_boot_dsps(int fd)
 	rbuf[0] = HPIA_B; /* Load HPI address register */
 	rbuf[1] = 0x00e0;
 	rbuf[2] = 0x0000;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 
 	rbuf[0] = HPID_B; /* Load HPI data register */
 	rbuf[1] = 0x0000;
 	rbuf[2] = 0x0000;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);  
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);  
 
 	rbuf[0] = HPIC_B; /* Load HPI control register */
 	rbuf[1] = 0x0001;
 	rbuf[2] = 0x0001;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 
 	rbuf[0] = HPIC_A; /* Load HPI control register */
 	rbuf[1] = 0x0001;
 	rbuf[2] = 0x0001;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 
 	/* Open, read and upload the DSP code files */
 
 	for (i = 0; i < 2; i++) {
 		if ((fp = fopen(filename[i], "rb")) == (FILE *)NULL) {
 			fprintf(stderr,"Couldn't open %s\n",filename[i]);
-			wf_close(fd);
+			wf_close(wf);
+                        return -1;
 		}
 		stat(filename[i], &sbuf);
 		/* printf("File: %s is %d bytes\n",filename[i],(int)sbuf.st_size); */
 		if ((cbuf = (unsigned char*)malloc((size_t)sbuf.st_size)) == (unsigned char*)NULL) {
 			fprintf(stderr,"malloc failed for %s buffer\n",filename[i]);
-			wf_close(fd);
+			wf_close(wf);
+                        return -1;
 		}      
 		if ((j=fread(cbuf, 1, sbuf.st_size, fp)) != sbuf.st_size) {
 			fprintf(stderr,"fread failed for %s (read %d bytes of an expected %d)\n",filename[i],j,(int)sbuf.st_size);
-			wf_close(fd);
+			wf_close(wf);
+                        return -1;
 		}
 
 		rbuf[0] = addrreg[i]; /* Load HPI address register - actually at 0x0080 because of inc. */
 		rbuf[1] = 0x007f;
 		rbuf[2] = 0x0000;
-		wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+		wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 
 		frames = 0;
 		memset(ubuf, 0, USBDATALEN*2);  /* zero buffer - unnecessary but less confusing to debug */    
@@ -124,13 +127,13 @@ int wf_boot_dsps(int fd)
 			if (remain >= USBDATALEN) {
 				for (j=2; j < USBDATALEN*2; j+=2)
 					ubuf[j] = *(cbuf + 0x2001 - remain--);
-				wf_sendmem(fd, datareg[i], 0, (unsigned char*)&ubuf, USBDATALEN*2);
+				wf_sendmem(wf, datareg[i], 0, (unsigned char*)&ubuf, USBDATALEN*2);
 				frames++;
 			} else {
 				left = remain*2;
 				for (j=0; j < left; j+=2)
 					ubuf[j+2] = *(cbuf + 0x2000 - remain--);
-				wf_sendmem(fd, datareg[i], 0, (unsigned char*)&ubuf, left);
+				wf_sendmem(wf, datareg[i], 0, (unsigned char*)&ubuf, left);
 				frames++;
 			}
 		}
@@ -145,44 +148,44 @@ int wf_boot_dsps(int fd)
 	rbuf[0] = HPIA_A; /* Load HPI address register for DSP A */
 	rbuf[1] = 0x007e; /* = 0x007f after increment */
 	rbuf[2] = 0x0000;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 
 	rbuf[0] = HPIA_B; /* Load HPI address register for DSP B */
 	rbuf[1] = 0x007e; /* = 0x007f after increment */
 	rbuf[2] = 0x0000;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 
 	rbuf[0] = HPID_A; /* Load HPI data register for DSP A */
 	rbuf[1] = entry_pt[1] & 0xff;
 	rbuf[2] = (entry_pt[1] & 0xff00) >> 8;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);  
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);  
 
 	rbuf[0] = HPID_B; /* Load HPI data register for DSP B */
 	rbuf[1] = entry_pt[0] & 0xff;;
 	rbuf[2] = (entry_pt[0] & 0xff00) >> 8;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 
 	/* This also gets sent. TODO: why ? */
 	rbuf[0] = HPIA_B; /* Load HPI address register for DSP B */
 	rbuf[1] = 0x00ff;
 	rbuf[2] = 0x003e;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);  
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);  
 	rbuf[0] = HPID_B; /* Load HPI data register for DSP B */
 	rbuf[1] = 0x00;
 	rbuf[2] = 0x00;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 	rbuf[0] = HPID_B; /* Load HPI data register for DSP B */
 	rbuf[1] = 0x00;
 	rbuf[2] = 0x00;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 	rbuf[0] = HPIA_A; /* Load HPI address register for DSP A */
 	rbuf[1] = 0x00ff;
 	rbuf[2] = 0x001f;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);  
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);  
 	rbuf[0] = HPIA_B; /* Load HPI address register for DSP B */
 	rbuf[1] = 0xff;
 	rbuf[2] = 0x1f;
-	wf_sendmem(fd, 0, 0, (unsigned char*)&rbuf, 6);
+	wf_sendmem(wf, 0, 0, (unsigned char*)&rbuf, 6);
 
 	return 0;
 }
@@ -195,7 +198,7 @@ int wf_boot_dsps(int fd)
 ** In fact, it doesn't seem to matter what data is sent in these
 ** 64 bytes - hence setting it to zero.
 */
-int wf_req1req2(int fd, int reqnum, int msgnum)
+int wf_req1req2(struct wavefinder *wf, int reqnum, int msgnum)
 {
 	/* unsigned char r0[] = {0xff,0xff,0xff,0xff,0x00,0x00,0x00,0x00,
 			      0x9d,0x3f,0x1b,0xff,0xd4,0xeb,0x7c,0xdd,
@@ -239,9 +242,9 @@ int wf_req1req2(int fd, int reqnum, int msgnum)
 	}
 
 	if (reqnum == 1)
-		wf_r1_msg(fd, p);
+		wf_r1_msg(wf, p);
 	else
-		wf_r2_msg(fd, p);
+		wf_r2_msg(wf, p);
 
 	return 0;
 }
@@ -249,75 +252,75 @@ int wf_req1req2(int fd, int reqnum, int msgnum)
 /*
 ** Initialize
 */
-int wf_init(int fd, double freq)
+int wf_init(struct wavefinder *wf, double freq)
 {
 	/* Initialize various SL11R registers - see wfsl11r.h */
 	/* Much of this is concerned with the PWM channels which control
 	   the coloured LEDs. */
-	wf_req1req2(fd, 2, 0);
-	wf_mem_write(fd, PWMCTRLREG, 0);
-	wf_mem_write(fd, PWMMAXCNT, 0x03ff);
+	wf_req1req2(wf, 2, 0);
+	wf_mem_write(wf, PWMCTRLREG, 0);
+	wf_mem_write(wf, PWMMAXCNT, 0x03ff);
 
-	wf_mem_write(fd, PWMCH0STRT, 0);
-	wf_mem_write(fd, PWMCH0STOP, 0);
+	wf_mem_write(wf, PWMCH0STRT, 0);
+	wf_mem_write(wf, PWMCH0STOP, 0);
 
-	wf_mem_write(fd, PWMCH1STRT, 0);
-	wf_mem_write(fd, PWMCH1STOP, 0);
+	wf_mem_write(wf, PWMCH1STRT, 0);
+	wf_mem_write(wf, PWMCH1STOP, 0);
 
-	wf_mem_write(fd, PWMCYCCNT, 0x03ff);
+	wf_mem_write(wf, PWMCYCCNT, 0x03ff);
 
-	wf_mem_write(fd, PWMCH2STRT, 0);
-	wf_mem_write(fd, PWMCH2STOP, 0);
+	wf_mem_write(wf, PWMCH2STRT, 0);
+	wf_mem_write(wf, PWMCH2STOP, 0);
 
-	wf_mem_write(fd, PWMCH3STRT, 0);
-	wf_mem_write(fd, PWMCH3STOP, 0);
+	wf_mem_write(wf, PWMCH3STRT, 0);
+	wf_mem_write(wf, PWMCH3STOP, 0);
 
-	wf_mem_write(fd, PWMCH0STRT, 0);
-	wf_mem_write(fd, PWMCH0STOP, 0x02ff);
+	wf_mem_write(wf, PWMCH0STRT, 0);
+	wf_mem_write(wf, PWMCH0STOP, 0x02ff);
 
-	wf_mem_write(fd, PWMCH1STOP, 0x02ff);
+	wf_mem_write(wf, PWMCH1STOP, 0x02ff);
 
-	wf_mem_write(fd, PWMCTRLREG, 0x800f);
-	wf_mem_write(fd, IOCTRLREG1, 0x3de0);
-	wf_mem_write(fd, UNK0XC120, 0);        /* TODO: work out what's at 0xc120 */
+	wf_mem_write(wf, PWMCTRLREG, 0x800f);
+	wf_mem_write(wf, IOCTRLREG1, 0x3de0);
+	wf_mem_write(wf, UNK0XC120, 0);        /* TODO: work out what's at 0xc120 */
 	wf_sleep(100000);
-	wf_mem_write(fd, UNK0XC120, 0xffff);
-	wf_mem_write(fd, OUTREG1, 0x3800);     /* TODO: work out what each bit controls */
-	wf_mem_write(fd, OUTREG0, 0x0000);
-	wf_mem_write(fd, OUTREG1, 0x3000);
-	wf_mem_write(fd, OUTREG1, 0x3800);
-	wf_boot_dsps(fd);
-	wf_mem_write(fd, OUTREG0, 0x1000);     /* TODO: work out what each bit controls */
-	wf_leds(fd,0x3ff, 0x180, 0x3ff); /* Green LED on as simple indicator */
-	wf_tune(fd, freq);
+	wf_mem_write(wf, UNK0XC120, 0xffff);
+	wf_mem_write(wf, OUTREG1, 0x3800);     /* TODO: work out what each bit controls */
+	wf_mem_write(wf, OUTREG0, 0x0000);
+	wf_mem_write(wf, OUTREG1, 0x3000);
+	wf_mem_write(wf, OUTREG1, 0x3800);
+	wf_boot_dsps(wf);
+	wf_mem_write(wf, OUTREG0, 0x1000);     /* TODO: work out what each bit controls */
+	wf_leds(wf,0x3ff, 0x180, 0x3ff); /* Green LED on as simple indicator */
+	wf_tune(wf, freq);
 	wf_sleep(400000);
-	wf_timing(fd, 0);
+	wf_timing(wf, 0);
 	wf_sleep(4000);
-	wf_timing(fd, 1);
+	wf_timing(wf, 1);
 	wf_sleep(4000);
-	wf_timing(fd, 1);
+	wf_timing(wf, 1);
 	wf_sleep(4000);
-	wf_timing(fd, 2);
+	wf_timing(wf, 2);
 	wf_sleep(50000);
-	wf_mem_write(fd, DACVALUE, 0x5330);
-	wf_mem_write(fd, DACVALUE, 0x5330);
+	wf_mem_write(wf, DACVALUE, 0x5330);
+	wf_mem_write(wf, DACVALUE, 0x5330);
 	wf_sleep(77000);
 	/* The next control message causes the WaveFinder to start sending
 	   isochronous data */
-	wf_req1req2(fd, 1, 1);
-	/* wf_read(fd, of, &pkts); */
-	wf_mem_write(fd, PWMCTRLREG, 0x800f);
-	wf_timing(fd, 1);
-	wf_timing(fd, 2);
-	wf_timing(fd, 1);
-	wf_timing(fd, 3);
-	wf_tune(fd, freq);
+	wf_req1req2(wf, 1, 1);
+	/* wf_read(wf, of, &pkts); */
+	wf_mem_write(wf, PWMCTRLREG, 0x800f);
+	wf_timing(wf, 1);
+	wf_timing(wf, 2);
+	wf_timing(wf, 1);
+	wf_timing(wf, 3);
+	wf_tune(wf, freq);
 	wf_sleep(200000);
-	wf_timing(fd, 4);
-	wf_tune(fd, freq);
+	wf_timing(wf, 4);
+	wf_tune(wf, freq);
 	wf_sleep(200000);
-	wf_tune(fd, freq);
+	wf_tune(wf, freq);
 	wf_sleep(200000);
-	wf_mem_write(fd, DACVALUE, 0x5330);
+	wf_mem_write(wf, DACVALUE, 0x5330);
         return 0;
 }

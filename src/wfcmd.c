@@ -26,7 +26,7 @@
 #include "opendab.h"
 
 extern FILE *of, *ffp;
-static int fdw;
+static struct wavefinder *wfw;
 
 int wfgetnum(int max)
 {
@@ -75,7 +75,7 @@ void wfexit(int signum)
 	if (ffp != NULL)
 		fclose(ffp);
 
-	wf_close(fdw);
+	wf_close(wfw);
 	fprintf(stderr,"Done.\n");
 	exit(EXIT_SUCCESS);
 }
@@ -83,11 +83,12 @@ void wfexit(int signum)
 /*
 ** Catch SIGINT (ctrl-c) to exit cleanly
 */ 
-int wfcatch(int fd)
+int wfcatch(struct wavefinder *wf)
 {
 	struct sigaction a;
 
-	fdw = fd;
+        wfw = (struct wavefinder *)malloc(sizeof(struct wavefinder));
+        memcpy(wfw, wf, sizeof(struct wavefinder));
 	a.sa_handler = wfexit;
 	sigemptyset(&(a.sa_mask));
 	a.sa_flags = 0;

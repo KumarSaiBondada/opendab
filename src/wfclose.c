@@ -24,10 +24,3 @@
 
 #include "opendab.h"
 
-int wf_close(int fd)
-{
-	wf_leds_off(fd);
-	wf_mem_write(fd, OUTREG1, 0x2000);
-	close(fd);
-	return 0;	
-}

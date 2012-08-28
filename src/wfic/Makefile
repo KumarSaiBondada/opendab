@@ -1,4 +1,4 @@
-CC=gcc
+CC=arm-none-eabi-gcc
 
 OBJS= wfic.o interleaver.o puncture.o viterbi.o scrambler.o
 
