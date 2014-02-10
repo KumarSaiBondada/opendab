@@ -24,7 +24,7 @@
 
 UNAME=$(shell uname)
 
-CC=arm-none-eabi-gcc
+CC=gcc -m32
 CFLAGS= -g -Wall -Werror -O3 -std=c99
 LIBS=-lfftw3 -lm -lusb-1.0.0
 WFIC=./wfic
@@ -33,8 +33,8 @@ LIBPATH=-L $(WFIC)
 # MacPorts libfftw on OS X
 
 ifeq ($(UNAME), Darwin)
-CFLAGS += -I /opt/local/include -I /opt/local/include/libusb-1.0
-LIBPATH += -L /opt/local/lib -L /opt/local/lib
+CFLAGS += -I /opt/local/include -I /Users/chris/Projects/wavefinder/libusb-install/include/libusb-1.0
+LIBPATH += -L /Users/chris/Projects/wavefinder/libusb-install/lib -L /opt/local/lib 
 endif
 
 # librt for clock_gettime on Linux
@@ -76,7 +76,7 @@ SYNC_OBJS=	sync.o wfafc.o wfclose.o wfimp.o wfinit.o wfleds.o \
 
 INCS= opendab.h wfsl11r.h $(WFIC)/wfic.h $(DRIVER)/wavefinder.h
 
-all:	wfic wf wfx wfxall prsgen sync
+all:	wfic wf wfx wfxall prsgen 
 
 wf:	$(WF_OBJS) $(COMMON_OBJS) $(INCS) $(WFIC)/libwfic.a
 	$(CC) $(LIBPATH) $(RUNPATH) $(CFLAGS) $(WF_OBJS) $(COMMON_OBJS) -o wf -lwfic $(LIBS)

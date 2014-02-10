@@ -43,14 +43,13 @@ int wf_afc(struct wavefinder *wf, double *offset, double afcv)
 		}
 
 		i = (int)(a * 65535);
-	
+
 		if (i > 0xffff)
 			i = 0xffff;
-		
+
 		afc_val = i & 0xfffc;
 		wf_mem_write(wf, DACVALUE, afc_val);
 	}
-        
+
         return 0;
 }
-

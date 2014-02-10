@@ -351,6 +351,7 @@ int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
 			sel_srv->dt = NULL;
 		}
 	}
+
 	return 0;
 }
 

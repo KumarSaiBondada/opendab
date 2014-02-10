@@ -55,7 +55,7 @@ void wfpad(struct pad_state *pad, unsigned char *buf, int bytes)
                                         short prefix = spack(&buf[xpadoff - 1]);
                                         memcpy(&dls, &prefix, 2);
                                         
-                                        //fprintf(stderr, "   DLS: f1: %d f2: %d cmd: %d first: %d toggle: %d\n", dls.f1, dls.f2, dls.cmd, dls.first, dls.toggle);
+                                        fprintf(stderr, "   DLS: f1: %d f2: %d cmd: %d first: %d toggle: %d\n", dls.f1, dls.f2, dls.cmd, dls.first, dls.toggle);
                                         
                                         if (dls.first == 2) { // first segment
                                                 if (dls.toggle != pad->toggle) {

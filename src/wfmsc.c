@@ -34,7 +34,7 @@
 
 /*
 ** Initialize circular buffer
-*/ 
+*/
 struct cbuf *init_cbuf(struct symrange *sr)
 {
 	int i;
@@ -76,11 +76,11 @@ void reset_cbuf(struct cbuf *cbuf)
 
 /*
  * Write to a circular buffer
- */ 
+ */
 int write_cbuf(struct cbuf *cbuf, unsigned char *symdata, int len, struct symrange *sr)
 {
         int frame_complete = 0;
-        
+
         if (cbuf->cb[cbuf->lframe].syms == sr->numsyms) {
                 cbuf->head = (cbuf->head + 1) % 16;
                 cbuf->lfp = cbuf->cb[cbuf->lframe].next; /* Next logical frame */
@@ -93,7 +93,7 @@ int write_cbuf(struct cbuf *cbuf, unsigned char *symdata, int len, struct symran
                 if (cbuf->cb[cbuf->lframe].syms == sr->numsyms)
                         frame_complete = 1;
         }
-        
+
         if (cbuf->lframe == 15)
                 cbuf->full = 1;
 
@@ -184,9 +184,9 @@ int msc_decode(struct selsrv *srv)
 			}
 			wfinitrs(); /* Initialize the Reed-Solomon decoder */
 		}
-		
+
 	}
-		
+
 	time_disinterleave(srv->cbuf, lf, subchsz, sr);
 
         if (au != NULL) {
@@ -197,8 +197,8 @@ int msc_decode(struct selsrv *srv)
         }
         if (dt != NULL) {
                 eep_depuncture_data(dpbuf, lf, dt->subch, &len);
-        }        
-	
+        }
+
 	/* BDB's wfic functions: */
 	bits = len/N - (K - 1);
 	k_viterbi(&metric, obuf, dpbuf, bits, mettab, 0, 0);
@@ -229,8 +229,8 @@ int msc_decode(struct selsrv *srv)
 /*
 ** Copy symbols corresponding to the given subchannel,
 ** after frequency deinterleaving, to a circular buffer.
-** Complete processing once buffer is full. 
-*/ 
+** Complete processing once buffer is full.
+*/
 int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 {
 	unsigned char sym, frame;
@@ -241,12 +241,16 @@ int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 	frame = *(symbuf+3);
 
 	if (sym == srv->sr.start[0]) {
+                fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
+
 		srv->cur_frame = frame;
 		freq_deinterleave(fbuf, symbuf+12);
 		buffer_full = write_cbuf(srv->cbuf, fbuf, BITSPERSYM, &srv->sr);
 	} else {
 		for (j=1; j < 4; j++)
 			if (sym == srv->sr.start[j]) {
+                                fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
+
 				if (frame != srv->cur_frame) {
 					reset_cbuf(srv->cbuf);
 				} else {
@@ -256,6 +260,8 @@ int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 			}
 		for (j=0; j < 4; j++)
 			if ((sym > srv->sr.start[j]) && (sym <= srv->sr.end[j])) {
+                                fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
+
 				if (frame != srv->cur_frame) {
                                         reset_cbuf(srv->cbuf);
 				} else {
@@ -266,8 +272,10 @@ int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 				}
 			}
 	}
-	if (buffer_full)
+	if (buffer_full) {
+                fprintf(stderr, "buffer full\n");
 		msc_decode(srv);
+        }
 
 	return 0;
 }

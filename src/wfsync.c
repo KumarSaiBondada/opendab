@@ -70,7 +70,7 @@ static void wf_sync_imsg(struct wavefinder *wf, unsigned char *symstr,  double i
 	memcpy(imsg + 2, symstr, 10 * sizeof(unsigned char));
 	imsg[24] = w1 & 0xff;
 	imsg[25] = (w1 >> 8) & 0xff;
-	imsg[26] = w2 & 0xff;  
+	imsg[26] = w2 & 0xff;
 	imsg[27] = (w2 >> 8) & 0xff;
 
 	wf_timing_msg(wf, imsg);
@@ -84,6 +84,7 @@ static double calc_c(struct sync_state *sync, fftw_complex *idata, int pts)
 	double c = 4.8828125e-7;
 
 	ifft_prs(idata, rdata, pts);
+        prs_dump(rdata);
 
 	if (sync->locked) {
 		wfref(0x0, 0x800, prslocal, sync->refs->prs1);
@@ -117,7 +118,7 @@ static double calc_c(struct sync_state *sync, fftw_complex *idata, int pts)
 			else
 				if (indx_n < -12)
 					indx_n = -80;
-			
+
 			indx_n = -indx_n;
 		}
 
@@ -167,7 +168,7 @@ static double calc_ir(struct sync_state *sync, fftw_complex *idata, int pts)
 	do {
 		stf = stf/2;
 		v = ir - stf;
-    
+
 		double vi = wfimp(sync, v, mdata);
 		if (vi > max) {
 			max = vi;
@@ -179,7 +180,7 @@ static double calc_ir(struct sync_state *sync, fftw_complex *idata, int pts)
 			max = vs;
 			ir = v;
 		}
-	} while ((1000*stf) > 2.5e-2); 
+	} while ((1000*stf) > 2.5e-2);
 
 	ir *= 1000.0;
 
@@ -209,12 +210,16 @@ int wf_sync(struct wavefinder *wf, unsigned char *symstr, struct sync_state *syn
 		sync->locked = 0;
 	}
 
-        fprintf(stderr, "c: %0.10f ir: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, ir, sync->locked, sync->lock_count, sync->count);
+        //fprintf(stderr, "c: %0.10f ir: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, ir, sync->locked, sync->lock_count, sync->count);
 
 	/* Must be at least 60ms between these messages */
 	long ems = wf_time();
+
+        //fprintf(stderr, "ems: %ld\n", ems);
+
 	long dt = ems - sync->last_cv_msg;
 	if (dt > 60L) {
+                //fprintf(stderr, "cv c: %0.10f\n", c);
                 wf_sync_cvmsg(wf, c);
                 sync->last_cv_msg = ems;
 	}
@@ -224,6 +229,7 @@ int wf_sync(struct wavefinder *wf, unsigned char *symstr, struct sync_state *syn
 	/* Must be at least 250ms between AFC messages */
 	dt = ems - sync->last_afc_msg;
         if (dt > 250L) {
+                //fprintf(stderr, "afc offset: %.10f ir: %.10f\n", sync->afc_offset, ir);
                 wf_afc(wf, &sync->afc_offset, ir);
                 sync->last_afc_msg = ems;
         }
@@ -238,16 +244,16 @@ int wf_sync(struct wavefinder *wf, unsigned char *symstr, struct sync_state *syn
 ** Assemble the appropriate four packets which form
 ** the Phase Reference Symbol and then call
 ** wf_sync() to do the synchronization
-*/ 
+*/
 int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf, struct sync_state *sync)
 {
 	int blk;
         unsigned char *symstr;
-        
+
         if (*(rdbuf+9) != 0x02) {
                 return(0);
         }
-        
+
         if (sync->count > 0) {
                 symstr = chgstr;
                 sync->count--;
@@ -257,14 +263,16 @@ int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf, struct sync_state 
 
 	blk = *(rdbuf+7); /* Block number: 0-3 */
 
+        //fprintf(stderr, "block: %d\n", blk);
+
 	if (blk == 0x00) {
 		sync->seen_flags = 1;
 		memcpy(sync->prsbuf, rdbuf+12, 512);
 	}  else {
 		sync->seen_flags |= 1 << blk;
-		/* Copy block data, excluding header */ 
+		/* Copy block data, excluding header */
 		memcpy(sync->prsbuf+(blk*512), rdbuf+12, 512);
-    
+
 		if (sync->seen_flags == 15) {
 			sync->seen_flags = 0;
 			wf_sync(wf, symstr, sync);
@@ -277,7 +285,7 @@ struct sync_state *wfsyncinit(void)
 {
         int i;
         struct sync_state *sync;
-        
+
 	/* alloc storage for impulse response calculations */
 	if ((idata = calloc(0x800, sizeof(fftw_complex))) == NULL) {
 		fprintf(stderr,"wfsync: calloc failed for idata");
@@ -319,7 +327,7 @@ struct sync_state *wfsyncinit(void)
 		fprintf(stderr,"wfsync: malloc failed for sync");
                 return(NULL);
 	}
-        
+
 	if ((sync->prsbuf = calloc(0x800, sizeof(unsigned char))) == NULL) {
 		fprintf(stderr,"wfsync: calloc failed for prsbuf");
                 return(NULL);
@@ -330,6 +338,7 @@ struct sync_state *wfsyncinit(void)
                 return(NULL);
 	}
 
+        sync->slock = 0;
         sync->count = 0;
         sync->locked = 0;
         sync->lock_count = 3;
@@ -337,18 +346,18 @@ struct sync_state *wfsyncinit(void)
         sync->last_cv_msg = 0;
         sync->last_afc_msg = 0;
 	sync->afc_offset = 3.25e-1;
-        
+
         for (i = 0; i < 8; i++) {
                 sync->ravg->sa[i] = 0.0;
         }
         sync->ravg->prev_ir = 0.0;
         sync->ravg->j = 0;
         sync->ravg->k = 0;
-        
+
 	if (wfrefinit(sync) == NULL) {
 		fprintf(stderr,"wfsync: wfrefinit failed");
                 return(NULL);
 	}
-        
+
         return sync;
 }

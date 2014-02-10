@@ -1,23 +1,47 @@
 #include "opendab.h"
+#include <sys/time.h>
 
 #define DEBUG 1
 
 
+static void cb_ctrl_xfr(struct libusb_transfer *ctrl_xfr)
+{
+        if (ctrl_xfr->status != LIBUSB_TRANSFER_COMPLETED) {
+                fprintf(stderr, "transfer status %d\n", ctrl_xfr->status);
+                libusb_free_transfer(ctrl_xfr);
+                exit(3);
+        }
+}
+
 static void cb_xfr(struct libusb_transfer *xfr)
 {
         int i;
+        struct wavefinder *wf = xfr->user_data;
+        struct timeval t;
 
-        fprintf(stderr, "length:%u, actual_length:%u\n", xfr->length, xfr->actual_length);
-
-        for (i = 0; i < xfr->actual_length; i++) {
-                printf("%02x", xfr->buffer[i]);
-                if (i % 16)
-                        printf("\n");
-                else if (i % 8)
-                        printf("  ");
-                else
-                        printf(" ");
+        if (xfr->status != LIBUSB_TRANSFER_COMPLETED) {
+                fprintf(stderr, "transfer status %d\n", xfr->status);
+                libusb_free_transfer(xfr);
+                exit(3);
         }
+
+        gettimeofday(&t, NULL);
+        //fprintf(stderr, "%06ld.%06ld received data\n", (long int) t.tv_sec, (long int)  t.tv_usec);
+
+        for (i = 0; i < xfr->num_iso_packets; i++) {
+                struct libusb_iso_packet_descriptor *pack = &xfr->iso_packet_desc[i];
+                unsigned char *buf = libusb_get_iso_packet_buffer_simple(xfr, i);
+
+                //fprintf(stderr, "packet buffer length: %d actual_length: %d\n", pack->length, pack->actual_length);
+
+                if (pack->status != LIBUSB_TRANSFER_COMPLETED) {
+                        fprintf(stderr, "Error: pack %u status %d\n", i, pack->status);
+                        exit(5);
+                }
+                wf_process_packet(wf, buf);
+        }
+
+        xfr->user_data = wf;
 
         if (libusb_submit_transfer(xfr) < 0) {
                 fprintf(stderr, "error re-submitting URB\n");
@@ -36,6 +60,7 @@ struct wavefinder *wf_open(char *devname)
                 fprintf(stderr, "Error initializing libusb: %s\n", libusb_error_name(rc));
                 return NULL;
         }
+        libusb_set_debug(NULL, LIBUSB_LOG_LEVEL_INFO);
 
         devh = libusb_open_device_with_vid_pid(NULL, VENDOR, PRODUCT);
         if (!devh) {
@@ -59,7 +84,9 @@ struct wavefinder *wf_open(char *devname)
         if (!wf->xfr)
                 return NULL;
 
-        libusb_fill_iso_transfer(wf->xfr, wf->devh, WAVEFINDER_ISOPIPE, wf->buf,
+        fprintf(stderr, "xfr: %p ctrl_xfr: %p\n", wf->xfr, wf->ctrl_xfr);
+
+        libusb_fill_iso_transfer(wf->xfr, wf->devh, WAVEFINDER_ISOPIPE, wf->bufptr,
                                  PIPESIZE, 32, cb_xfr, NULL, 0);
         libusb_set_iso_packet_lengths(wf->xfr, 524);
 
@@ -75,9 +102,12 @@ int wf_close(struct wavefinder *wf)
         return 0;
 }
 
-int wf_read(struct wavefinder *wf, unsigned char *rdbuf, unsigned int* len)
+int wf_read(struct wavefinder *wf)
 {
         int rc;
+
+
+        wf->xfr->user_data = wf;
 
         rc = libusb_submit_transfer(wf->xfr);
         if (rc != LIBUSB_SUCCESS) {
@@ -85,10 +115,12 @@ int wf_read(struct wavefinder *wf, unsigned char *rdbuf, unsigned int* len)
                 exit(EXIT_FAILURE);
         }
 
-        rc = libusb_handle_events(NULL);
-        if (rc != LIBUSB_SUCCESS) {
-                fprintf(stderr, "libusb_handle_events: %s\n", libusb_error_name(rc));
-                exit(EXIT_FAILURE);
+        for (;;) {
+                rc = libusb_handle_events(NULL);
+                if (rc != LIBUSB_SUCCESS) {
+                        fprintf(stderr, "libusb_handle_events: %s\n", libusb_error_name(rc));
+                        exit(EXIT_FAILURE);
+                }
         }
 
         return 0;
@@ -97,22 +129,54 @@ int wf_read(struct wavefinder *wf, unsigned char *rdbuf, unsigned int* len)
 int wf_usb_ctrl_msg(struct wavefinder *wf, int request,
                     int value, int index, unsigned char *bytes, int size)
 {
-        int rc;
+        if (wf->init == 0) {
+                struct libusb_transfer *ctrl_xfr = libusb_alloc_transfer(0);
+                if (!ctrl_xfr) {
+                        fprintf(stderr, "failed to alloc transfer\n");
+                        exit(EXIT_FAILURE);
+                }
 
-        rc = libusb_control_transfer(wf->devh,
-                                     LIBUSB_REQUEST_TYPE_VENDOR,
-                                     request,
-                                     value,
-                                     index,
-                                     bytes,
-                                     size,
-                                     0);
+                unsigned char* buf = malloc((sizeof(unsigned char)) * (size + LIBUSB_CONTROL_SETUP_SIZE));
+                if (!buf) {
+                        fprintf(stderr, "failed to allocate control transfer buffer\n");
+                        exit(EXIT_FAILURE);
+                }
 
-        if (rc < 0) {
-                fprintf(stderr, "libusb_control_transfer: %s\n", libusb_error_name(rc));
-                exit(EXIT_FAILURE);
+                libusb_fill_control_setup(buf,
+                                          LIBUSB_REQUEST_TYPE_VENDOR,
+                                          request,
+                                          value,
+                                          index,
+                                          size);
+
+                memcpy(buf + LIBUSB_CONTROL_SETUP_SIZE, bytes, size);
+
+                libusb_fill_control_transfer(ctrl_xfr,
+                                             wf->devh,
+                                             buf,
+                                             cb_ctrl_xfr,
+                                             wf,
+                                             0);
+
+                int rc = libusb_submit_transfer(ctrl_xfr);
+                if (rc != LIBUSB_SUCCESS) {
+                        fprintf(stderr, "libusb_submit_transfer, ctrl, async: %s\n", libusb_error_name(rc));
+                        exit(EXIT_FAILURE);
+                }
         }
-
+        else {
+                int rc = libusb_control_transfer(wf->devh,
+                                             LIBUSB_REQUEST_TYPE_VENDOR,
+                                             request,
+                                             value,
+                                             index,
+                                             bytes,
+                                             size,
+                                             0);
+                if (rc < 0) {
+                        fprintf(stderr, "libusb_control_transfer: %s\n", libusb_error_name(rc));
+                        exit(EXIT_FAILURE);
+                }
+        }
         return 0;
 }
-

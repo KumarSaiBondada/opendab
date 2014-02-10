@@ -49,13 +49,6 @@
 #define WAVEFINDER_IF 0
 #define WAVEFINDER_ISOPIPE 0x81
 
-struct wavefinder {
-        struct libusb_device_handle *devh;
-        struct libusb_transfer *xfr;
-        unsigned char buf[PIPESIZE];
-        unsigned char *bufptr;
-};
-
 #define TRUE -1;
 #define FALSE 0;
 
@@ -89,6 +82,7 @@ struct cbuf {
 };
 
 struct sync_state {
+        int slock;
         int count;
         int locked;
         int lock_count;
@@ -117,6 +111,19 @@ struct raverage {
 struct data_state {
         int addr;
         int dgtype;
+};
+
+struct wavefinder {
+        int init;
+        int selected;
+        int enslistvisible;
+        struct libusb_device_handle *devh;
+        struct libusb_transfer *xfr;
+        struct libusb_transfer *ctrl_xfr;
+        struct sync_state *sync;
+        struct selsrv *service;
+        unsigned char buf[PIPESIZE];
+        unsigned char *bufptr;
 };
 
 int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest, struct pad_state *pad);
@@ -158,6 +165,7 @@ int firecrccheck(unsigned char *buf);
 
 fftw_complex* prs_cread(const char* prsfile, int n);
 int prs_scale(unsigned char *prsdate, fftw_complex *idata);
+void prs_dump(fftw_complex *idata);
 
 int fft_prs(fftw_complex *in, fftw_complex *out, int n);
 int ifft_prs(fftw_complex *in, fftw_complex *out, int n);
@@ -182,7 +190,8 @@ void wf_sleep(int usec);
 
 struct wavefinder *wf_open(char *devname);
 int wf_close(struct wavefinder *wf);
-int wf_read(struct wavefinder *wf, unsigned char *rdbuf, unsigned int *len);
+int wf_read(struct wavefinder *wf);
+int wf_process_packet(struct wavefinder *wf, unsigned char *buf);
 int wf_usb_ctrl_msg(struct wavefinder *wf, int request,
                     int value, int index, unsigned char *bytes, int size);
 

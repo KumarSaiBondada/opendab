@@ -19,7 +19,7 @@
   along with OpenDAB.  If not, see <http://www.gnu.org/licenses/>.
 */
 /*
-** Main program interoperating with the Psion WaveFinder 
+** Main program interoperating with the Psion WaveFinder
 */
 #include "opendab.h"
 
@@ -31,22 +31,15 @@ extern int fibcnt;
 /* Select all symbols by default */
 static unsigned char selstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
-unsigned char *fsyms, *rfibs, *rdbuf;
-FILE *of = NULL, *ffp = NULL;
+unsigned char *fsyms, *rfibs;
+FILE *of = NULL;
+FILE *ffp = NULL;
 
 int main (int argc, char **argv)
 {
-	struct selsrv sel_srv;
-        char outfile[80] = "";
 	char devname[80] = "/dev/wavefinder0";
-	char ficfile[80] = "fic.dat";
-        const char usage[] = " is part of OpenDAB. Distributed under the GPL V.3\nUsage: wf [-f] [-d outfile] [-w devname][freq]\n-d dumps ensemble to outfile caution - huge!\n-w uses Wavefinder devname\n-f generates FIC file 'fic.dat' (ignored if '-d' specified)\nfreq defaults to 225.648MHz (BBC National DAB)";	
-	int nargs, sym;
-        unsigned int k, l = 0;
-        int gen_fic = 0, gen_dump = 0;
-	int slock = 0, enslistvisible = 0;
-	int selected = 0;
-        struct sync_state *sync;
+        const char usage[] = " is part of OpenDAB. Distributed under the GPL V.3\nUsage: wf [-f] [-d outfile] [-w devname][freq]\n-d dumps ensemble to outfile caution - huge!\n-w uses Wavefinder devname\n-f generates FIC file 'fic.dat' (ignored if '-d' specified)\nfreq defaults to 225.648MHz (BBC National DAB)";
+	int nargs;
         struct wavefinder *wf;
 
 	/* double freq = 218.640;*/ /* DRg */
@@ -54,25 +47,11 @@ int main (int argc, char **argv)
 	/* double freq = 223.936;*/
 	double freq = 225.648; /* BBC */
 	/* double freq = 227.360;*/
-	
+
         nargs = argc;
         while (nargs-- > 1) {
                 if (*argv[argc-nargs] == '-') {
                         switch (*(argv[argc-nargs]+1)) {
-                        case 'd':
-                                /* Set output filename */
-                                if (strcmp(argv[argc-nargs], "-d") == 0) {
-					if (--nargs) {
-						strcpy(outfile, argv[argc-(nargs)]);
-						gen_dump = 1;
-					} else {
-						fprintf(stderr,"Please supply a filename for -d\n");
-						fprintf(stderr,"%s %s\n", argv[0], usage);
-						exit(EXIT_FAILURE);
-					}
-					 break;	
-				}
-                                break;
 			case 'w':
 				/* Set device name */
 				if (strcmp(argv[argc-nargs], "-w") == 0) {
@@ -83,12 +62,8 @@ int main (int argc, char **argv)
 						fprintf(stderr,"%s %s\n", argv[0], usage);
 						exit(EXIT_FAILURE);
 					}
-					 break;	
+					 break;
 				}
-                                break;
-                        case 'f':
-                                if (strcmp(argv[argc-nargs], "-f") == 0)
-                                        gen_fic = 1;
                                 break;
                         case 'h':
                                 printf("%s %s\n", argv[0], usage);
@@ -98,38 +73,31 @@ int main (int argc, char **argv)
 		} else
 			sscanf(argv[argc-nargs],"%le",&freq);
 	}
-	/* Open WaveFinder */	
+	/* Open WaveFinder */
         wf = wf_open(devname);
 	if (wf == NULL) {
 		perror("wavefinder");
 		exit(EXIT_FAILURE);
 	}
 
-	wfcatch(wf);   /* Install handler to catch SIGTERM */
-
-	if (gen_dump) {
-		if ((of = fopen(outfile,"w")) == NULL) {
-			perror("Output file open failed");
-			wf_close(wf);
-		}
-	} else if (gen_fic)
-		if ((ffp = fopen(ficfile,"w")) == NULL) {
-			perror("FIC output file open failed");
-			wf_close(wf);
-		}
-
-	
 	/* Initialize synchronization system - PRS data, storage etc */
-	if ((sync = wfsyncinit()) == NULL) {
+	if ((wf->sync = wfsyncinit()) == NULL) {
                 perror("wfsyncinit failed");
                 wf_close(wf);
+                exit(EXIT_FAILURE);
         }
 
-	/* Initialize read buffer storage */
-	if ((rdbuf = calloc(PIPESIZE, sizeof(unsigned char))) == NULL) {
-		fprintf(stderr,"main: calloc failed for rdbuf");
-		wf_close(wf);
-	}
+        if ((wf->service = calloc(1, sizeof(struct selsrv))) == NULL) {
+                perror("wf->service calloc failed");
+                wf_close(wf);
+                exit(EXIT_FAILURE);
+        }
+
+        wf->init = 1;
+        wf->selected = 0;
+        wf->enslistvisible = 0;
+
+	wfcatch(wf);   /* Install handler to catch SIGTERM */
 
 	/* Allocate storage for symbols 2, 3 and 4 which comprise the FIC */
 	if ((fsyms = calloc(384 * 3, sizeof(unsigned char))) == NULL) {
@@ -145,72 +113,108 @@ int main (int argc, char **argv)
 		wf_close(wf);
 	}
 
-	if (!gen_dump) {
-		sel_srv.au = (struct audio_subch *)NULL;
-		sel_srv.dt = (struct data_subch_packet *)NULL;
-		ficinit(&einf);
-	}
+        wf->service->au = (struct audio_subch *)NULL;
+        wf->service->dt = (struct data_subch_packet *)NULL;
+        ficinit(&einf);
 
 	/* Initalize Wavefinder */
 	fprintf(stderr,"Initialization ");
 	wf_init(wf, freq);
 	fprintf(stderr,"complete.\n");
 
-        exit(0);
+        wf->init = 0;
 
 	fprintf(stderr,"Sync ");
-	for (;;) {
-		wf_read(wf, rdbuf, &l);
-		for (k=0; k < l; k+=524) {
-                        prs_assemble(wf, (rdbuf + k), sync);
-
-			if (sync->locked && !slock) {
-				slock = 1;
-				fprintf(stderr,"locked.\n");
-			}
-			if (gen_dump && (*(rdbuf+9+k) == 0x01))
-				fwrite(rdbuf+k, sizeof(unsigned char), 524, of);
-			else
-				/* Wait for sync to lock or things might get slowed down too much */
-				if (sync->locked) {
-					if ((fibcnt < MAXFIBS) && !labelled(&einf)) {
-						sym = *(rdbuf+2+k);
-						if ((sym == 2)||(sym == 3)||(sym == 4))
-							fic_assemble(rdbuf+k, fsyms, rfibs, ffp);
-					} else {
-						if (!enslistvisible) {
-							disp_ensemble(&einf);
-							enslistvisible = 1;
-						}
-						if (sel_srv.au == NULL && sel_srv.dt == NULL) {
-                                                        user_select_service(&einf, &sel_srv);
-                                                }
-						else {
-							if (!selected && sel_srv.au != NULL && (sel_srv.au->subchid < 64)) {
-								startsym_audio(&sel_srv.sr, sel_srv.au);
-								wfsymsel(selstr, &sel_srv.sr);
-                                                                sel_srv.cbuf = init_cbuf(&sel_srv.sr);
-                                                                sel_srv.pad = init_pad();
-								selected = 1;
-								sync->count = 6; // sync
-								fprintf(stderr,"Type ctrl-c to quit\n");
-							}
-							if (!selected && sel_srv.dt != NULL && (sel_srv.dt->subch->subchid < 64)) {
-								startsym_data(&sel_srv.sr, sel_srv.dt->subch);
-								wfsymsel(selstr, &sel_srv.sr);
-                                                                sel_srv.cbuf = init_cbuf(&sel_srv.sr);
-                                                                sel_srv.data = init_data(sel_srv.dt->pktaddr);
-								selected = 1;
-								sync->count = 6;
-								fprintf(stderr,"Type ctrl-c to quit\n");
-							}
-							if ((sync->count == 0) && (*(rdbuf+2+k) > 4))
-                                                                msc_assemble(rdbuf+k, &sel_srv);
-						}
-					}
-				}
-		}
-	}
-	exit(EXIT_SUCCESS);	
+        wf_read(wf);
+	exit(EXIT_SUCCESS);
 }
 
+void wf_dump_packet(unsigned char *buf)
+{
+        /*
+    byte 0 : 0x0c
+    byte 1 : 0x62
+    byte 2 : <symbol>
+    byte 3 : <frame number, 00-1f>
+    byte 4 : 0xb9 / 0xbd / 0xbe / 0xbf
+    byte 5 : 0x20 / 0x10
+    byte 6 : 0x01
+    byte 7 : 0x00
+    byte 8 : 0x80
+    byte 9 : 0x01
+    byte 10 : 0x00
+    byte 11 : 0x00 / 0x80
+        */
+
+        if (buf[9] != 0x02)
+                return;
+
+        fprintf(stderr, "byte0: %02x byte1: %02x symbol: %02x frame number: %02x byte9: %02x block: %02x\n",
+                buf[0], buf[1], buf[2], buf[3], buf[9], buf[7]);
+
+        for (int i = 12; i < 396; i++) {
+                fprintf(stderr, "%02x ", buf[i]);
+                if ((i-11) % 16 == 0)
+                        fprintf(stderr, "\n");
+        }
+        fprintf(stderr, "\n");
+
+        /* for (int i = 396; i < 524; i++) { */
+        /*         fprintf(stderr, "%02x ", buf[i]); */
+        /*         if ((i-11) % 16 == 0) */
+        /*                 fprintf(stderr, "\n"); */
+        /* } */
+        /* fprintf(stderr, "\n"); */
+}
+
+int wf_process_packet(struct wavefinder *wf, unsigned char *buf)
+{
+        int sym = *(buf+2);
+
+        /*wf_dump_packet(buf); */
+        prs_assemble(wf, buf, wf->sync);
+
+        if (wf->sync->locked && !wf->sync->slock) {
+                wf->sync->slock = 1;
+                fprintf(stderr,"locked.\n");
+        }
+        /* Wait for sync to lock or things might get slowed down too much */
+        if (wf->sync->locked) {
+                if ((fibcnt < MAXFIBS) && !labelled(&einf)) {
+                        if ((sym == 2)||(sym == 3)||(sym == 4))
+                                fic_assemble(buf, fsyms, rfibs, ffp);
+                } else {
+                        if (!wf->enslistvisible) {
+                                disp_ensemble(&einf);
+                                wf->enslistvisible = 1;
+                        }
+                        if (wf->service->au == NULL && wf->service->dt == NULL) {
+                                user_select_service(&einf, wf->service);
+                        }
+                        else {
+                                if (!wf->selected && wf->service->au != NULL && (wf->service->au->subchid < 64)) {
+                                        startsym_audio(&wf->service->sr, wf->service->au);
+                                        wfsymsel(selstr, &wf->service->sr);
+                                        wf->service->cbuf = init_cbuf(&wf->service->sr);
+                                        wf->service->pad = init_pad();
+                                        wf->selected = 1;
+                                        wf->sync->count = 6; // sync
+                                        fprintf(stderr,"Type ctrl-c to quit\n");
+                                }
+                                if (!wf->selected && wf->service->dt != NULL && (wf->service->dt->subch->subchid < 64)) {
+                                        startsym_data(&wf->service->sr, wf->service->dt->subch);
+                                        wfsymsel(selstr, &wf->service->sr);
+                                        wf->service->cbuf = init_cbuf(&wf->service->sr);
+                                        wf->service->data = init_data(wf->service->dt->pktaddr);
+                                        wf->selected = 1;
+                                        wf->sync->count = 6;
+                                        fprintf(stderr,"Type ctrl-c to quit\n");
+                                }
+                                if ((wf->sync->count == 0) && (*(buf+2) > 4)) {
+                                        msc_assemble(buf, wf->service);
+                                }
+                        }
+                }
+        }
+        return 0;
+}

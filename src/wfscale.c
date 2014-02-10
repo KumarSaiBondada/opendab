@@ -30,9 +30,16 @@ int prs_scale(unsigned char* prsdata, fftw_complex* idata)
 
 	dptr = prsdata;
 
-	for (k = 0; k < 0x800; k++)  
+	for (k = 0; k < 0x800; k++)
 		/* *(idata + k) = 0 + 0.732421875*(*(dptr + k) - 128)*I; */
-		*(idata + k) = 0 + (*(dptr + k) - 128)*I;
+                *(idata + k) = 0 + (*(dptr + k) - 128)*I;
 
 	return 0;
+}
+
+void prs_dump(fftw_complex *idata)
+{
+	int k;
+	for (k = 0; k < 0x800; k++)
+                fprintf(stderr, "%11.7f\n", cimag(idata[k]));
 }

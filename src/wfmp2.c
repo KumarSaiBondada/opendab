@@ -68,14 +68,14 @@ int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest, struct pad_state
 		else if (mp2h.id == 0) {
 			header_expected = 0;
 			if (lbrtab[mp2h.bit_rate_index] != bitrate) {
-				/* fprintf(stderr,"Low bitrate conflict FIC:%d MP2 header:%d\n",bitrate,lbrtab[mp2h.bit_rate_index]); */
+				fprintf(stderr,"Low bitrate conflict FIC:%d MP2 header:%d\n",bitrate,lbrtab[mp2h.bit_rate_index]);
 				header_valid = 0;
 			}
 		} else if (brtab[mp2h.bit_rate_index] != bitrate) {
-			/* fprintf(stderr,"Bitrate conflict FIC:%d MP2 header:%d\n",bitrate,brtab[mp2h.bit_rate_index]); */
+			//fprintf(stderr,"Bitrate conflict FIC:%d MP2 header:%d\n",bitrate,brtab[mp2h.bit_rate_index]);
 			header_valid = 0;
 		}
-                
+
                 /* let the PAD decoder know the bitrate and sampling frequency */
                 pad->bitrate = bitrate;
                 if (mp2h.id == 1) 
@@ -86,8 +86,9 @@ int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest, struct pad_state
 	} else
 		header_expected = 1;
 
-	if (header_valid)
+	if (header_valid) {
 		fwrite(buf, sizeof(char), len, dest);
+        }
 
         return 0;
 }

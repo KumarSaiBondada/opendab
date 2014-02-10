@@ -19,7 +19,7 @@
   along with OpenDAB.  If not, see <http://www.gnu.org/licenses/>.
 */
 /*
-** Main program interoperating with the Psion WaveFinder 
+** Main program interoperating with the Psion WaveFinder
 */
 #include "opendab.h"
 
@@ -66,7 +66,7 @@ int main(int argc, char **argv)
 				puts(usage1);
 				puts(usage2);
 				exit(EXIT_SUCCESS);
-				break;	
+				break;
 			}
 		} else
 			strcpy(infile,argv[argc-nargs]);
@@ -88,14 +88,15 @@ int main(int argc, char **argv)
 
 	fprintf(stderr,"Sync ");
 
+        wf = malloc(sizeof (struct wavefinder));
+
 	while (!feof(ifp)) {
 		l = fread(rdbuf, 16768, 1, ifp);
                 l *= 16768;
-                
+
 		for (k=0; k < l; k+=524) {
                         prs_assemble(wf, (rdbuf + k), sync);
 		}
 	}
-	exit(EXIT_SUCCESS);	
+	exit(EXIT_SUCCESS);
 }
-
