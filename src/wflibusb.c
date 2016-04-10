@@ -46,7 +46,7 @@ static void cb_xfr(struct libusb_transfer *xfr)
 
                 if (!wf->sync->locked || sym != last_sym) {
                         last_sym = sym;
-                        wf_process_packet(wf, buf);
+                        (wf->process_func)(wf, buf);
                 }
         }
 
@@ -58,7 +58,8 @@ static void cb_xfr(struct libusb_transfer *xfr)
         }
 }
 
-struct wavefinder *wf_open(char *devname)
+struct wavefinder *wf_open(char *devname,
+                           int (*process_func)(struct wavefinder *, unsigned char *))
 {
         int rc;
         struct wavefinder *wf = NULL;
@@ -88,6 +89,7 @@ struct wavefinder *wf_open(char *devname)
 
         wf->devh = devh;
         wf->bufptr = wf->buf;
+        wf->process_func = process_func;
 
         wf->xfr = libusb_alloc_transfer(32);
         if (!wf->xfr)

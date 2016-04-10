@@ -74,7 +74,7 @@ int main (int argc, char **argv)
 			sscanf(argv[argc-nargs],"%le",&freq);
 	}
 	/* Open WaveFinder */
-        wf = wf_open(devname);
+        wf = wf_open(devname, wf_process_packet);
 	if (wf == NULL) {
 		perror("wavefinder");
 		exit(EXIT_FAILURE);
@@ -129,49 +129,10 @@ int main (int argc, char **argv)
 	exit(EXIT_SUCCESS);
 }
 
-void wf_dump_packet(unsigned char *buf)
-{
-        /*
-    byte 0 : 0x0c
-    byte 1 : 0x62
-    byte 2 : <symbol>
-    byte 3 : <frame number, 00-1f>
-    byte 4 : 0xb9 / 0xbd / 0xbe / 0xbf
-    byte 5 : 0x20 / 0x10
-    byte 6 : 0x01
-    byte 7 : 0x00
-    byte 8 : 0x80
-    byte 9 : 0x01
-    byte 10 : 0x00
-    byte 11 : 0x00 / 0x80
-        */
-
-        if (buf[9] != 0x02)
-                return;
-
-        /*fprintf(stderr, "byte0: %02x byte1: %02x symbol: %02x frame number: %02x byte9: %02x block: %02x\n",
-                buf[0], buf[1], buf[2], buf[3], buf[9], buf[7]);*/
-
-        /*for (int i = 12; i < 396; i++) {
-                fprintf(stderr, "%02x ", buf[i]);
-                if ((i-11) % 16 == 0)
-                        fprintf(stderr, "\n");
-        }
-        fprintf(stderr, "\n");*/
-
-        /* for (int i = 396; i < 524; i++) { */
-        /*         fprintf(stderr, "%02x ", buf[i]); */
-        /*         if ((i-11) % 16 == 0) */
-        /*                 fprintf(stderr, "\n"); */
-        /* } */
-        /* fprintf(stderr, "\n"); */
-}
-
 int wf_process_packet(struct wavefinder *wf, unsigned char *buf)
 {
         int sym = *(buf+2);
 
-        wf_dump_packet(buf);
         prs_assemble(wf, buf, wf->sync);
 
         if (wf->sync->locked && !wf->sync->slock) {

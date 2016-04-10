@@ -262,7 +262,7 @@ int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf, struct sync_state 
 
 	blk = *(rdbuf+7); /* Block number: 0-3 */
 
-        fprintf(stderr, "block: %d\n", blk);
+        //fprintf(stderr, "block: %d\n", blk);
 
 	if (blk == 0x00) {
 		sync->seen_flags = 1;
@@ -272,7 +272,7 @@ int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf, struct sync_state 
 		/* Copy block data, excluding header */
 		memcpy(sync->prsbuf+(blk*512), rdbuf+12, 512);
 
-		fprintf(stderr, "seen_flags: %d\n", sync->seen_flags);
+		//fprintf(stderr, "seen_flags: %d\n", sync->seen_flags);
 		if (sync->seen_flags == 15) {
 			sync->seen_flags = 0;
 			wf_sync(wf, symstr, sync);

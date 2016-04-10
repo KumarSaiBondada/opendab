@@ -114,6 +114,7 @@ struct data_state {
 };
 
 struct wavefinder {
+        int (*process_func)(struct wavefinder *, unsigned char *);
         int init;
         int selected;
         int enslistvisible;
@@ -188,7 +189,7 @@ int wfref(int indx, int pts, fftw_complex* outp, fftw_complex* inp);
 
 void wf_sleep(int usec);
 
-struct wavefinder *wf_open(char *devname);
+struct wavefinder *wf_open(char *devname, int (*process_func)(struct wavefinder *, unsigned char *));
 int wf_close(struct wavefinder *wf);
 int wf_read(struct wavefinder *wf);
 int wf_process_packet(struct wavefinder *wf, unsigned char *buf);
