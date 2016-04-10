@@ -247,8 +247,6 @@ int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 	} else {
 		for (j=1; j < 4; j++)
 			if (sym == srv->sr.start[j]) {
-                                //fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
-
 				if (frame != srv->cur_frame) {
 					reset_cbuf(srv->cbuf);
 				} else {
@@ -258,8 +256,6 @@ int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 			}
 		for (j=0; j < 4; j++)
 			if ((sym > srv->sr.start[j]) && (sym <= srv->sr.end[j])) {
-                                //fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
-
 				if (frame != srv->cur_frame) {
                                         reset_cbuf(srv->cbuf);
 				} else {
@@ -271,7 +267,7 @@ int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 			}
 	}
 	if (buffer_full) {
-                fprintf(stderr, "buffer full\n");
+                //fprintf(stderr, "buffer full\n");
 		msc_decode(srv);
         }
 

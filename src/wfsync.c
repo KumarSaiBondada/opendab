@@ -29,9 +29,6 @@
 static fftw_complex *idata, *rdata, *mdata, *prslocal, *iprslocal, *cdata;
 static double *magdata;
 
-/* Select all symbols by default */
-static unsigned char selstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-
 /* Use this before changing the symbol selection */
 static unsigned char chgstr[] = {0x00, 0xf0, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
 
@@ -57,7 +54,7 @@ static void wf_sync_cvmsg(struct wavefinder *wf, double c)
         }
 }
 
-static void wf_sync_imsg(struct wavefinder *wf, unsigned char *symstr,  double ir)
+static void wf_sync_imsg(struct wavefinder *wf, double ir)
 {
 	unsigned char imsg[] = {0x7f, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00,
@@ -66,6 +63,15 @@ static void wf_sync_imsg(struct wavefinder *wf, unsigned char *symstr,  double i
 
 	short w1 = ((int)(ir * 81.66400146484375)) & 0xffff;
 	short w2 = ((int)(ir * 1.024)) & 0xffff;
+
+        unsigned char *symstr;
+
+        if (wf->sync->count > 0) {
+                symstr = chgstr;
+                wf->sync->count--;
+        } else {
+                symstr = wf->selstr;
+        }
 
 	memcpy(imsg + 2, symstr, 10 * sizeof(unsigned char));
 	imsg[24] = w1 & 0xff;
@@ -186,9 +192,10 @@ static double calc_ir(struct sync_state *sync, fftw_complex *idata, int pts)
         return ir;
 }
 
-int wf_sync(struct wavefinder *wf, unsigned char *symstr, struct sync_state *sync)
+int wf_sync(struct wavefinder *wf)
 {
 	int pts = 0x800;
+        struct sync_state *sync = wf->sync;
 
 	prs_scale(sync->prsbuf, idata);
 
@@ -205,9 +212,10 @@ int wf_sync(struct wavefinder *wf, unsigned char *symstr, struct sync_state *syn
 			sync->locked = 0;
 		}
 	} else {
+                /* fprintf(stderr, "NOT OK\n"); */
 		sync->lock_count = 3;
 		sync->locked = 0;
-	}
+        }
 
         //fprintf(stderr, "c: %0.10f ir: %0.10f sync_locked: %d lock_count: %d count: %d\n", c, ir, sync->locked, sync->lock_count, sync->count);
 
@@ -234,7 +242,7 @@ int wf_sync(struct wavefinder *wf, unsigned char *symstr, struct sync_state *syn
         }
 
         /* Send this message every time */
-        wf_sync_imsg(wf, symstr, ir);
+        wf_sync_imsg(wf, ir);
 
 	return 0;
 }
@@ -244,25 +252,16 @@ int wf_sync(struct wavefinder *wf, unsigned char *symstr, struct sync_state *syn
 ** the Phase Reference Symbol and then call
 ** wf_sync() to do the synchronization
 */
-int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf, struct sync_state *sync)
+int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf)
 {
 	int blk;
-        unsigned char *symstr;
-
+        struct sync_state *sync = wf->sync;
+        
         if (*(rdbuf+9) != 0x02) {
                 return(0);
         }
 
-        if (sync->count > 0) {
-                symstr = chgstr;
-                sync->count--;
-        } else {
-                symstr = selstr;
-        }
-
 	blk = *(rdbuf+7); /* Block number: 0-3 */
-
-        //fprintf(stderr, "block: %d\n", blk);
 
 	if (blk == 0x00) {
 		sync->seen_flags = 1;
@@ -272,10 +271,9 @@ int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf, struct sync_state 
 		/* Copy block data, excluding header */
 		memcpy(sync->prsbuf+(blk*512), rdbuf+12, 512);
 
-		//fprintf(stderr, "seen_flags: %d\n", sync->seen_flags);
 		if (sync->seen_flags == 15) {
 			sync->seen_flags = 0;
-			wf_sync(wf, symstr, sync);
+			wf_sync(wf);
 		}
 	}
 	return(0);

@@ -116,6 +116,7 @@ struct data_state {
 struct wavefinder {
         int (*process_func)(struct wavefinder *, unsigned char *);
         int init;
+        int last_sym;
         int selected;
         int enslistvisible;
         struct libusb_device_handle *devh;
@@ -125,6 +126,7 @@ struct wavefinder {
         struct selsrv *service;
         unsigned char buf[PIPESIZE];
         unsigned char *bufptr;
+        unsigned char *selstr;
 };
 
 int wfmp2(unsigned char *buf, int len, int bitrate, FILE *dest, struct pad_state *pad);
@@ -135,7 +137,7 @@ int wfinitrs();
 int wfdabplusdec(unsigned char *sfbuf, unsigned char *ibuf, int ibytes, int bitrate, FILE *dest);
 
 struct sync_state *wfsyncinit();
-int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf, struct sync_state *sync);
+int prs_assemble(struct wavefinder *wf, unsigned char *rdbuf);
 
 int msc_assemble(unsigned char *symbuf, struct selsrv *srv);
 int fic_assemble(unsigned char* rdbuf, unsigned char* ficsyms, unsigned char* rawfibs, FILE *ofp);

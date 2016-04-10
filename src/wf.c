@@ -28,8 +28,7 @@
 extern struct ens_info einf;
 extern int fibcnt;
 
-/* Select all symbols by default */
-static unsigned char selstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+static unsigned char allstr[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 
 unsigned char *fsyms, *rfibs;
 FILE *of = NULL;
@@ -97,6 +96,9 @@ int main (int argc, char **argv)
         wf->selected = 0;
         wf->enslistvisible = 0;
 
+        wf->selstr = malloc(10);
+        memcpy(wf->selstr, allstr, 10);
+
 	wfcatch(wf);   /* Install handler to catch SIGTERM */
 
 	/* Allocate storage for symbols 2, 3 and 4 which comprise the FIC */
@@ -133,7 +135,7 @@ int wf_process_packet(struct wavefinder *wf, unsigned char *buf)
 {
         int sym = *(buf+2);
 
-        prs_assemble(wf, buf, wf->sync);
+        prs_assemble(wf, buf);
 
         if (wf->sync->locked && !wf->sync->slock) {
                wf->sync->slock = 1;
@@ -155,7 +157,7 @@ int wf_process_packet(struct wavefinder *wf, unsigned char *buf)
                         else {
                                 if (!wf->selected && wf->service->au != NULL && (wf->service->au->subchid < 64)) {
                                         startsym_audio(&wf->service->sr, wf->service->au);
-                                        wfsymsel(selstr, &wf->service->sr);
+                                        wfsymsel(wf->selstr, &wf->service->sr);
                                         wf->service->cbuf = init_cbuf(&wf->service->sr);
                                         wf->service->pad = init_pad();
                                         wf->selected = 1;
@@ -164,15 +166,16 @@ int wf_process_packet(struct wavefinder *wf, unsigned char *buf)
                                 }
                                 if (!wf->selected && wf->service->dt != NULL && (wf->service->dt->subch->subchid < 64)) {
                                         startsym_data(&wf->service->sr, wf->service->dt->subch);
-                                        wfsymsel(selstr, &wf->service->sr);
+                                        wfsymsel(wf->selstr, &wf->service->sr);
                                         wf->service->cbuf = init_cbuf(&wf->service->sr);
                                         wf->service->data = init_data(wf->service->dt->pktaddr);
                                         wf->selected = 1;
                                         wf->sync->count = 6;
                                         fprintf(stderr,"Type ctrl-c to quit\n");
                                 }
-                                if ((wf->sync->count == 0) && (*(buf+2) > 4)) {
+                                if ((wf->sync->count == 0) && (sym > 4) && (sym != wf->last_sym)) {
                                         msc_assemble(buf, wf->service);
+                                        wf->last_sym = sym;
                                 }
                         }
                 }
