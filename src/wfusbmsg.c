@@ -32,7 +32,7 @@ int wf_mem_write(struct wavefinder *wf, unsigned short addr, unsigned short val)
 	bytes[2] = (unsigned char)(val & 0xff);
 	bytes[3] = (unsigned char)((val >> 8) & 0xff);
 
-	//fprintf(stderr,"SLMEM: %x, %x, %x, %x\n", bytes[0], bytes[1], bytes[2], bytes[3]);
+	fprintf(stderr,"SLMEM: %x, %x, %x, %x\n", bytes[0], bytes[1], bytes[2], bytes[3]);
 
 	return(wf_usb_ctrl_msg(wf, SLMEM, addr, val, bytes, 4));
 }
@@ -56,10 +56,10 @@ int wf_tune_msg(struct wavefinder *wf, unsigned int reg, unsigned char bits,
 	tbuf[8] = lband ? 1 : 0;
 	tbuf[11] = 0x10;  /* TODO: Check what this byte does, if anything */
 
-        /* fprintf(stderr, "WTUNE: "); */
-        /* for (int i=0; i < TBUFSIZE; i++) */
-        /*         fprintf(stderr, "%#0hhx ",*(tbuf+i)); */
-        /* fprintf(stderr, "\n"); */
+        fprintf(stderr, "WTUNE: ");
+        for (int i=0; i < TBUFSIZE; i++)
+                fprintf(stderr, "%#0hhx ",*(tbuf+i));
+        fprintf(stderr, "\n");
 
 	return(wf_usb_ctrl_msg(wf, WFTUNE, 0, 0, tbuf, TBUFSIZE));
 }
@@ -69,10 +69,10 @@ int wf_tune_msg(struct wavefinder *wf, unsigned int reg, unsigned char bits,
 */
 int wf_timing_msg(struct wavefinder *wf, unsigned char* bytes)
 {
-        /* fprintf(stderr, "WFTIMING: "); */
-        /* for (int i = 0; i < 32; i++) */
-        /*         fprintf(stderr, "%x ", bytes[i]); */
-        /* fprintf(stderr, "\n"); */
+        fprintf(stderr, "WFTIMING: ");
+        for (int i = 0; i < 32; i++) 
+                fprintf(stderr, "%x ", bytes[i]);
+        fprintf(stderr, "\n");
 	return(wf_usb_ctrl_msg(wf, WFTIMING, 0, 0, bytes, 32));
 }  
 

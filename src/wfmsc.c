@@ -241,15 +241,13 @@ int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 	frame = *(symbuf+3);
 
 	if (sym == srv->sr.start[0]) {
-                fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
-
 		srv->cur_frame = frame;
 		freq_deinterleave(fbuf, symbuf+12);
 		buffer_full = write_cbuf(srv->cbuf, fbuf, BITSPERSYM, &srv->sr);
 	} else {
 		for (j=1; j < 4; j++)
 			if (sym == srv->sr.start[j]) {
-                                fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
+                                //fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
 
 				if (frame != srv->cur_frame) {
 					reset_cbuf(srv->cbuf);
@@ -260,7 +258,7 @@ int msc_assemble(unsigned char *symbuf, struct selsrv *srv)
 			}
 		for (j=0; j < 4; j++)
 			if ((sym > srv->sr.start[j]) && (sym <= srv->sr.end[j])) {
-                                fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
+                                //fprintf(stderr, "sym: %d frame: %d\n", sym, frame);
 
 				if (frame != srv->cur_frame) {
                                         reset_cbuf(srv->cbuf);

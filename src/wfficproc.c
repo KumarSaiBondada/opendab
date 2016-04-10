@@ -324,7 +324,6 @@ int user_select_service(struct ens_info* e, struct selsrv *sel_srv)
 				if ((j == i) || ((j == i - 1) && (p->sa != NULL))) {
 					sel_srv->sid = p->sid;
                                         sel_srv->cur_frame = 0;
-                                        sel_srv->cifcnt = 0;
                                         sel_srv->dest = stdout;
 					if ((j == i - 1) && (p->sa != NULL)) {
 						sel_srv->au = p->sa;
@@ -365,7 +364,6 @@ int label_select_service(struct ens_info* e, struct selsrv *sel_srv, char *label
 
                         sel_srv->sid = p->sid;
                         sel_srv->cur_frame = 0;
-                        sel_srv->cifcnt = 0;
                         sel_srv->dest = stdout;
                         if (p->sa != NULL) {
                                 sel_srv->au = p->sa;

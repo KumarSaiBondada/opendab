@@ -18,6 +18,8 @@ static void cb_xfr(struct libusb_transfer *xfr)
         int i;
         struct wavefinder *wf = xfr->user_data;
         struct timeval t;
+        static unsigned char last_sym;
+        unsigned char sym;
 
         if (xfr->status != LIBUSB_TRANSFER_COMPLETED) {
                 fprintf(stderr, "transfer status %d\n", xfr->status);
@@ -38,7 +40,14 @@ static void cb_xfr(struct libusb_transfer *xfr)
                         fprintf(stderr, "Error: pack %u status %d\n", i, pack->status);
                         exit(5);
                 }
-                wf_process_packet(wf, buf);
+
+                /* skip duplicate symbols */
+                sym = *(buf+2);
+
+                if (!wf->sync->locked || sym != last_sym) {
+                        last_sym = sym;
+                        wf_process_packet(wf, buf);
+                }
         }
 
         xfr->user_data = wf;
@@ -83,8 +92,6 @@ struct wavefinder *wf_open(char *devname)
         wf->xfr = libusb_alloc_transfer(32);
         if (!wf->xfr)
                 return NULL;
-
-        fprintf(stderr, "xfr: %p ctrl_xfr: %p\n", wf->xfr, wf->ctrl_xfr);
 
         libusb_fill_iso_transfer(wf->xfr, wf->devh, WAVEFINDER_ISOPIPE, wf->bufptr,
                                  PIPESIZE, 32, cb_xfr, NULL, 0);

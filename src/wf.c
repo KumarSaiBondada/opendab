@@ -149,15 +149,15 @@ void wf_dump_packet(unsigned char *buf)
         if (buf[9] != 0x02)
                 return;
 
-        fprintf(stderr, "byte0: %02x byte1: %02x symbol: %02x frame number: %02x byte9: %02x block: %02x\n",
-                buf[0], buf[1], buf[2], buf[3], buf[9], buf[7]);
+        /*fprintf(stderr, "byte0: %02x byte1: %02x symbol: %02x frame number: %02x byte9: %02x block: %02x\n",
+                buf[0], buf[1], buf[2], buf[3], buf[9], buf[7]);*/
 
-        for (int i = 12; i < 396; i++) {
+        /*for (int i = 12; i < 396; i++) {
                 fprintf(stderr, "%02x ", buf[i]);
                 if ((i-11) % 16 == 0)
                         fprintf(stderr, "\n");
         }
-        fprintf(stderr, "\n");
+        fprintf(stderr, "\n");*/
 
         /* for (int i = 396; i < 524; i++) { */
         /*         fprintf(stderr, "%02x ", buf[i]); */
@@ -171,12 +171,12 @@ int wf_process_packet(struct wavefinder *wf, unsigned char *buf)
 {
         int sym = *(buf+2);
 
-        /*wf_dump_packet(buf); */
+        wf_dump_packet(buf);
         prs_assemble(wf, buf, wf->sync);
 
         if (wf->sync->locked && !wf->sync->slock) {
-                wf->sync->slock = 1;
-                fprintf(stderr,"locked.\n");
+               wf->sync->slock = 1;
+               fprintf(stderr,"locked.\n");
         }
         /* Wait for sync to lock or things might get slowed down too much */
         if (wf->sync->locked) {

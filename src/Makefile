@@ -26,7 +26,7 @@ UNAME=$(shell uname)
 
 CC=gcc -m32
 CFLAGS= -g -Wall -Werror -O3 -std=c99
-LIBS=-lfftw3 -lm -lusb-1.0.0
+LIBS=-lfftw3 -lm -lusb-1.0
 WFIC=./wfic
 LIBPATH=-L $(WFIC)
 
@@ -59,6 +59,10 @@ WF_OBJS=	wf.o wfafc.o wfclose.o wfimp.o wfinit.o wfleds.o wfcmd.o \
 		wfpk.o wfprsread.o wfravg.o wfref.o wfscale.o wfsleep.o \
 		wfsync.o wftiming.o wftune.o wfusbmsg.o wflibusb.o
 
+WFDUMP_OBJS=    wfdump.o wfafc.o wfclose.o wfimp.o wfinit.o wfleds.o wfcmd.o \
+		wfpk.o wfprsread.o wfravg.o wfref.o wfscale.o wfsleep.o \
+		wfsync.o wftiming.o wftune.o wfusbmsg.o wflibusb.o
+
 WFX_OBJS=	wfx.o
 
 WFXALL_OBJS=	wfxall.o
@@ -76,10 +80,13 @@ SYNC_OBJS=	sync.o wfafc.o wfclose.o wfimp.o wfinit.o wfleds.o \
 
 INCS= opendab.h wfsl11r.h $(WFIC)/wfic.h $(DRIVER)/wavefinder.h
 
-all:	wfic wf wfx wfxall prsgen 
+all:	wfic wf wfx wfxall prsgen wfdump
 
 wf:	$(WF_OBJS) $(COMMON_OBJS) $(INCS) $(WFIC)/libwfic.a
 	$(CC) $(LIBPATH) $(RUNPATH) $(CFLAGS) $(WF_OBJS) $(COMMON_OBJS) -o wf -lwfic $(LIBS)
+
+wfdump:	$(WFDUMP_OBJS) $(COMMON_OBJS) $(INCS) $(WFIC)/libwfic.a
+	$(CC) $(LIBPATH) $(RUNPATH) $(CFLAGS) $(WFDUMP_OBJS) $(COMMON_OBJS) -o wfdump -lwfic $(LIBS)
 
 wfx:	$(WFX_OBJS) $(COMMON_OBJS) $(INCS) $(WFIC)/libwfic.a
 	$(CC) $(LIBPATH) $(RUNPATH) $(CFLAGS) $(WFX_OBJS) $(COMMON_OBJS) -o wfx -lwfic $(LIBS)

@@ -121,7 +121,6 @@ int main(int argc, char **argv)
                         sel_srv[i].au = p->pa; /* XXX primary hardcoded */
                         sel_srv[i].sid = p->sid;
                         sel_srv[i].cur_frame = 0;
-                        sel_srv[i].cifcnt = 0;
                         startsym_audio(&sel_srv[i].sr, sel_srv[i].au);
                         sel_srv[i].cbuf = init_cbuf(&sel_srv[i].sr);
                 }
