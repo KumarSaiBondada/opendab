@@ -18,8 +18,6 @@ static void cb_xfr(struct libusb_transfer *xfr)
         int i;
         struct wavefinder *wf = xfr->user_data;
         struct timeval t;
-        static unsigned char last_sym;
-        unsigned char sym;
 
         if (xfr->status != LIBUSB_TRANSFER_COMPLETED) {
                 fprintf(stderr, "transfer status %d\n", xfr->status);
@@ -28,26 +26,17 @@ static void cb_xfr(struct libusb_transfer *xfr)
         }
 
         gettimeofday(&t, NULL);
-        //fprintf(stderr, "%06ld.%06ld received data\n", (long int) t.tv_sec, (long int)  t.tv_usec);
 
         for (i = 0; i < xfr->num_iso_packets; i++) {
                 struct libusb_iso_packet_descriptor *pack = &xfr->iso_packet_desc[i];
                 unsigned char *buf = libusb_get_iso_packet_buffer_simple(xfr, i);
-
-                //fprintf(stderr, "packet buffer length: %d actual_length: %d\n", pack->length, pack->actual_length);
 
                 if (pack->status != LIBUSB_TRANSFER_COMPLETED) {
                         fprintf(stderr, "Error: pack %u status %d\n", i, pack->status);
                         exit(5);
                 }
 
-                /* skip duplicate symbols */
-                sym = *(buf+2);
-
-                if (!wf->sync->locked || sym != last_sym) {
-                        last_sym = sym;
-                        (wf->process_func)(wf, buf);
-                }
+                (wf->process_func)(wf, buf);
         }
 
         xfr->user_data = wf;
