@@ -30,13 +30,6 @@ LIBS=-lfftw3 -lm -lusb-1.0
 WFIC=./wfic
 LIBPATH=-L $(WFIC)
 
-# MacPorts libfftw on OS X
-
-ifeq ($(UNAME), Darwin)
-CFLAGS += -I /opt/local/include -I /Users/chris/Projects/wavefinder/libusb-install/include/libusb-1.0
-LIBPATH += -L /Users/chris/Projects/wavefinder/libusb-install/lib -L /opt/local/lib 
-endif
-
 # librt for clock_gettime on Linux
 
 ifeq ($(UNAME), Linux)
