@@ -7,7 +7,7 @@
 static void cb_ctrl_xfr(struct libusb_transfer *ctrl_xfr)
 {
         if (ctrl_xfr->status != LIBUSB_TRANSFER_COMPLETED) {
-                fprintf(stderr, "transfer status %d\n", ctrl_xfr->status);
+                fprintf(stderr, "control transfer status %d\n", ctrl_xfr->status);
                 libusb_free_transfer(ctrl_xfr);
                 exit(3);
         }
@@ -20,7 +20,7 @@ static void cb_xfr(struct libusb_transfer *xfr)
         struct timeval t;
 
         if (xfr->status != LIBUSB_TRANSFER_COMPLETED) {
-                fprintf(stderr, "transfer status %d\n", xfr->status);
+                fprintf(stderr, "iso transfer status %d\n", xfr->status);
                 libusb_free_transfer(xfr);
                 exit(3);
         }
@@ -77,22 +77,35 @@ struct wavefinder *wf_open(char *devname,
                 return NULL;
 
         wf->devh = devh;
-        wf->bufptr = wf->buf;
         wf->process_func = process_func;
 
-        wf->xfr = libusb_alloc_transfer(32);
-        if (!wf->xfr)
-                return NULL;
+        for (int i = 0; i < ISO_TRANSFERS; i++) {
+                wf->xfr[i] = libusb_alloc_transfer(32);
+                if (!wf->xfr[i])
+                        return NULL;
 
-        libusb_fill_iso_transfer(wf->xfr, wf->devh, WAVEFINDER_ISOPIPE, wf->bufptr,
-                                 PIPESIZE, 32, cb_xfr, NULL, 0);
-        libusb_set_iso_packet_lengths(wf->xfr, 524);
+                libusb_fill_iso_transfer(
+                        wf->xfr[i],
+                        wf->devh,
+                        WAVEFINDER_ISOPIPE,
+                        wf->buf[i],
+                        PIPESIZE,
+                        32,
+                        cb_xfr,
+                        NULL,
+                        0);
 
+                libusb_set_iso_packet_lengths(wf->xfr[i], 524);
+                wf->xfr[i]->user_data = wf;
+        }
         return wf;
 }
 
 int wf_close(struct wavefinder *wf)
 {
+        for (int i = 0; i < ISO_TRANSFERS; i++)
+                libusb_free_transfer(wf->xfr[i]);
+
         libusb_release_interface(wf->devh, 0);
         libusb_close(wf->devh);
         libusb_exit(NULL);
@@ -104,13 +117,12 @@ int wf_read(struct wavefinder *wf)
 {
         int rc;
 
-
-        wf->xfr->user_data = wf;
-
-        rc = libusb_submit_transfer(wf->xfr);
-        if (rc != LIBUSB_SUCCESS) {
-                fprintf(stderr, "libusb_submit_transfer: %s\n", libusb_error_name(rc));
-                exit(EXIT_FAILURE);
+        for (int i = 0; i < ISO_TRANSFERS; i++) {
+                rc = libusb_submit_transfer(wf->xfr[i]);
+                if (rc != LIBUSB_SUCCESS) {
+                        fprintf(stderr, "libusb_submit_transfer: %s\n", libusb_error_name(rc));
+                        exit(EXIT_FAILURE);
+                }
         }
 
         for (;;) {

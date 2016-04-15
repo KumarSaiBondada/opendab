@@ -113,6 +113,8 @@ struct data_state {
         int dgtype;
 };
 
+#define ISO_TRANSFERS 8
+
 struct wavefinder {
         int (*process_func)(struct wavefinder *, unsigned char *);
         int init;
@@ -120,12 +122,11 @@ struct wavefinder {
         int selected;
         int enslistvisible;
         struct libusb_device_handle *devh;
-        struct libusb_transfer *xfr;
+        struct libusb_transfer *xfr[ISO_TRANSFERS];
         struct libusb_transfer *ctrl_xfr;
         struct sync_state *sync;
         struct selsrv *service;
-        unsigned char buf[PIPESIZE];
-        unsigned char *bufptr;
+        unsigned char buf[ISO_TRANSFERS][PIPESIZE];
         unsigned char *selstr;
 };
 
