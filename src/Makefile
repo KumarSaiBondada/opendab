@@ -24,7 +24,7 @@
 
 UNAME=$(shell uname)
 
-CC=gcc -m32
+CC=gcc #-m32
 CFLAGS= -g -Wall -Werror -O3 -std=c99
 LIBS=-lfftw3 -lm -lusb-1.0
 WFIC=./wfic

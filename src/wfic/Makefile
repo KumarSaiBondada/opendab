@@ -1,4 +1,4 @@
-CC=gcc -m32
+CC=gcc #-m32
 
 OBJS= wfic.o interleaver.o puncture.o viterbi.o scrambler.o
 
